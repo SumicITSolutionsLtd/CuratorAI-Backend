@@ -47,12 +47,11 @@ INSTALLED_APPS = [
     # Local apps
     'apps.accounts',
     'apps.outfits',
-    # TODO: Create these apps later
-    # 'apps.wardrobe',
-    # 'apps.posts',
-    # 'apps.recommendations',
-    # 'apps.search',
-    # 'apps.lookbooks',
+    'apps.wardrobe',
+    'apps.notifications',
+    'apps.cart',
+    'apps.social',
+    'apps.lookbooks',
 ]
 
 MIDDLEWARE = [

@@ -150,3 +150,38 @@ class UserFollowing(models.Model):
     def __str__(self):
         return f"{self.follower.username} follows {self.following.username}"
 
+
+class PasswordResetCode(models.Model):
+    """
+    Model to store password reset verification codes.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_codes')
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'password_reset_codes'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Reset code for {self.user.email}"
+
+
+class EmailVerificationCode(models.Model):
+    """
+    Model to store email verification codes.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_verification_codes')
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'email_verification_codes'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Verification code for {self.user.email}"

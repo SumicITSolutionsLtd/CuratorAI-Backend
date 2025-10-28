@@ -12,6 +12,12 @@ from .views import (
     FollowUserView,
     UserFollowersView,
     UserFollowingView,
+    RequestPasswordResetView,
+    ConfirmPasswordResetView,
+    RequestEmailVerificationView,
+    ConfirmEmailVerificationView,
+    SearchUsersView,
+    DeleteAccountView,
 )
 
 app_name = 'accounts'
@@ -23,13 +29,25 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
+    # Password Reset
+    path('password-reset/request/', RequestPasswordResetView.as_view(), name='password-reset-request'),
+    path('password-reset/confirm/', ConfirmPasswordResetView.as_view(), name='password-reset-confirm'),
+    
+    # Email Verification
+    path('verify-email/request/', RequestEmailVerificationView.as_view(), name='email-verification-request'),
+    path('verify-email/confirm/', ConfirmEmailVerificationView.as_view(), name='email-verification-confirm'),
+    
     # User Profile
     path('me/', CurrentUserView.as_view(), name='current-user'),
     path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),
+    path('users/search/', SearchUsersView.as_view(), name='search-users'),
     
     # Following
     path('users/<int:user_id>/follow/', FollowUserView.as_view(), name='follow-user'),
     path('users/<int:user_id>/followers/', UserFollowersView.as_view(), name='user-followers'),
     path('users/<int:user_id>/following/', UserFollowingView.as_view(), name='user-following'),
+    
+    # Account Management
+    path('delete/', DeleteAccountView.as_view(), name='delete-account'),
 ]
 

@@ -28,12 +28,11 @@ urlpatterns = [
     # API v1 Routes
     path('api/v1/auth/', include('apps.accounts.urls')),
     path('api/v1/outfits/', include('apps.outfits.urls')),
-    # TODO: Uncomment these when apps are created
-    # path('api/v1/wardrobe/', include('apps.wardrobe.urls')),
-    # path('api/v1/posts/', include('apps.posts.urls')),
-    # path('api/v1/recommendations/', include('apps.recommendations.urls')),
-    # path('api/v1/search/', include('apps.search.urls')),
-    # path('api/v1/lookbooks/', include('apps.lookbooks.urls')),
+    path('api/v1/wardrobe/', include('apps.wardrobe.urls')),
+    path('api/v1/notifications/', include('apps.notifications.urls')),
+    path('api/v1/cart/', include('apps.cart.urls')),
+    path('api/v1/social/', include('apps.social.urls')),
+    path('api/v1/lookbooks/', include('apps.lookbooks.urls')),
 ]
 
 # Serve media files in development
