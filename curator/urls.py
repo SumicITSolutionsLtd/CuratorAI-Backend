@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -16,7 +17,34 @@ admin.site.site_header = "CuratorAI Admin"
 admin.site.site_title = "CuratorAI Admin Portal"
 admin.site.index_title = "Welcome to CuratorAI Admin Portal"
 
+
+def api_root(request):
+    """Root API endpoint - shows available endpoints"""
+    return JsonResponse({
+        'message': 'Welcome to CuratorAI API',
+        'version': '1.0.0',
+        'status': 'operational',
+        'documentation': {
+            'swagger': request.build_absolute_uri('/api/schema/swagger-ui/'),
+            'redoc': request.build_absolute_uri('/api/schema/redoc/'),
+            'schema': request.build_absolute_uri('/api/schema/'),
+        },
+        'endpoints': {
+            'authentication': request.build_absolute_uri('/api/v1/auth/'),
+            'outfits': request.build_absolute_uri('/api/v1/outfits/'),
+            'wardrobe': request.build_absolute_uri('/api/v1/wardrobe/'),
+            'notifications': request.build_absolute_uri('/api/v1/notifications/'),
+            'cart': request.build_absolute_uri('/api/v1/cart/'),
+            'social': request.build_absolute_uri('/api/v1/social/'),
+            'lookbooks': request.build_absolute_uri('/api/v1/lookbooks/'),
+        }
+    })
+
+
 urlpatterns = [
+    # Root API endpoint
+    path('', api_root, name='api-root'),
+    
     # Django Admin
     path('admin/', admin.site.urls),
     

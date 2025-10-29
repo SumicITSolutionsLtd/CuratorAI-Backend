@@ -1,0 +1,63 @@
+# CuratorAI Backend - Environment Variables Template
+# Use this to configure Vercel Environment Variables
+
+# ============================================
+# REQUIRED FOR VERCEL DEPLOYMENT
+# ============================================
+
+DJANGO_SECRET_KEY=your-super-secret-key-change-this-to-random-50-characters
+DJANGO_SETTINGS_MODULE=curator.settings.production
+DJANGO_DEBUG=False
+ALLOWED_HOSTS=curator-ai-backend.vercel.app,*.vercel.app,localhost,127.0.0.1
+
+# ============================================
+# CORS CONFIGURATION
+# ============================================
+
+CORS_ALLOW_ALL_ORIGINS=True
+# OR use specific origins:
+# CORS_ALLOWED_ORIGINS=https://your-frontend.vercel.app,http://localhost:3000
+
+# ============================================
+# DATABASE (Optional)
+# ============================================
+
+# DATABASE_URL=postgresql://user:pass@host.neon.tech/curatorai?sslmode=require
+
+# ============================================
+# JWT TOKEN SETTINGS
+# ============================================
+
+JWT_ACCESS_TOKEN_LIFETIME=15
+JWT_REFRESH_TOKEN_LIFETIME=10080
+
+# ============================================
+# EMAIL CONFIGURATION (Optional)
+# ============================================
+
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-specific-password
+
+# ============================================
+# HOW TO ADD TO VERCEL
+# ============================================
+
+1. Go to: https://vercel.com/dashboard
+2. Select project: curator-ai-backend
+3. Go to: Settings → Environment Variables
+4. Add each variable above
+5. Select: Production, Preview, Development
+6. Click: Save
+7. Redeploy!
+
+# ============================================
+# MINIMUM REQUIRED (4 variables)
+# ============================================
+
+DJANGO_SECRET_KEY=your-secret-key
+DJANGO_SETTINGS_MODULE=curator.settings.production
+DJANGO_DEBUG=False
+ALLOWED_HOSTS=curator-ai-backend.vercel.app,*.vercel.app
+

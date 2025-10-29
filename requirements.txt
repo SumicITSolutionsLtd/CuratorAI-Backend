@@ -1,0 +1,5 @@
+# Main requirements file for Vercel deployment
+# This file is used by Vercel to install dependencies
+
+-r requirements/production.txt
+
