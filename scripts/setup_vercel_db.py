@@ -9,6 +9,21 @@ Usage:
 """
 import os
 import sys
+from pathlib import Path
+
+# Load environment variables from .env.local if it exists
+env_file = Path(__file__).parent.parent / '.env.local'
+if env_file.exists():
+    print(f"Loading environment variables from {env_file}")
+    with open(env_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                # Remove quotes if present
+                value = value.strip('"').strip("'")
+                os.environ[key.strip()] = value
+
 import django
 
 # Setup Django
@@ -25,6 +40,23 @@ def main():
     print("=" * 60)
     print("Setting up Vercel Database")
     print("=" * 60)
+    
+    # Check if DATABASE_URL is set
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        print("\n❌ ERROR: DATABASE_URL not found in environment variables!")
+        print("   Make sure you've run: vercel env pull .env.local")
+        print("   And that .env.local file exists in the project root.")
+        return False
+    
+    # Mask password in output
+    if '@' in database_url:
+        masked_url = database_url.split('@')[0].split(':')[:-1]
+        masked_url.append('***')
+        masked_url.append('@' + database_url.split('@')[1])
+        print(f"\n✓ DATABASE_URL found: {'@'.join(masked_url)}")
+    else:
+        print(f"\n✓ DATABASE_URL found")
     
     # Run migrations
     print("\n1. Running migrations...")
