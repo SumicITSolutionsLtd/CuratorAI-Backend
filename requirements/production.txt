@@ -4,6 +4,9 @@
 gunicorn==22.0.0
 uvicorn[standard]==0.30.5
 
+# Static Files (for serverless/Vercel)
+whitenoise==6.8.2
+
 # Monitoring
 sentry-sdk==2.12.0
 

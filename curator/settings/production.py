@@ -41,10 +41,22 @@ if IS_BUILD:
     # Vercel expects static files in staticfiles_build directory
     STATIC_ROOT = BASE_DIR / 'staticfiles_build'
 else:
-    # At runtime, static files are served by Vercel from staticfiles_build
-    # STATIC_ROOT doesn't need to exist at runtime since Vercel serves them
-    # But we keep it set for consistency
+    # At runtime, use WhiteNoise to serve static files
+    # WhiteNoise works with serverless platforms like Vercel
     STATIC_ROOT = BASE_DIR / 'staticfiles_build'
+    
+    # Add WhiteNoise middleware for serving static files
+    # It should be right after SecurityMiddleware
+    try:
+        MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    except (ValueError, AttributeError):
+        # Middleware already added or MIDDLEWARE is not a list
+        pass
+    
+    # WhiteNoise configuration
+    WHITENOISE_USE_FINDERS = False  # Don't use finders, serve from STATIC_ROOT
+    WHITENOISE_AUTOREFRESH = False
+    WHITENOISE_ROOT = STATIC_ROOT
 
 DATABASE_URL = config('DATABASE_URL', default=None)
 if DATABASE_URL:
