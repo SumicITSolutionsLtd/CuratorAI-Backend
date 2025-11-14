@@ -25,11 +25,32 @@ CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bo
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())
 
 # Database - Use PostgreSQL in production if available, fallback to SQLite
+# During build (collectstatic), we use in-memory SQLite to avoid file system issues
+import os
+IS_BUILD = os.environ.get('DJANGO_BUILD_MODE') == '1' or (
+    os.environ.get('VERCEL', '') == '1' and os.environ.get('VERCEL_ENV') != 'production'
+)
+
+# Disable Celery apps during build as they require database access
+if IS_BUILD:
+    INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in [
+        'django_celery_beat',
+        'django_celery_results',
+    ]]
+
 DATABASE_URL = config('DATABASE_URL', default=None)
 if DATABASE_URL:
     DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
+elif IS_BUILD:
+    # Use in-memory SQLite during build to avoid file system and connection errors
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',  # In-memory database for build
+        }
+    }
 else:
-    # Use SQLite for Vercel (ephemeral, but works for testing)
+    # Use SQLite for Vercel runtime (ephemeral, but works for testing)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
