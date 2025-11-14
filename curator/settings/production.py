@@ -40,6 +40,11 @@ if IS_BUILD:
     ]]
     # Vercel expects static files in staticfiles_build directory
     STATIC_ROOT = BASE_DIR / 'staticfiles_build'
+else:
+    # At runtime, static files are served by Vercel from staticfiles_build
+    # STATIC_ROOT doesn't need to exist at runtime since Vercel serves them
+    # But we keep it set for consistency
+    STATIC_ROOT = BASE_DIR / 'staticfiles_build'
 
 DATABASE_URL = config('DATABASE_URL', default=None)
 if DATABASE_URL:
