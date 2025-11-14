@@ -15,8 +15,8 @@ fi
 # Install dependencies
 pip install -r requirements/production.txt
 
-# Collect static files only (no database operations needed for build)
-# Migrations should be run separately or at runtime
+# Collect static files to the directory expected by Vercel
+# STATIC_ROOT is set to staticfiles_build in production settings during build
 python manage.py collectstatic --noinput --clear
 
 # Note: Migrations are skipped during build as they require database access

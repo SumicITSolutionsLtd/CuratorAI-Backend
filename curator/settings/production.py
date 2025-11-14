@@ -32,11 +32,14 @@ IS_BUILD = os.environ.get('DJANGO_BUILD_MODE') == '1' or (
 )
 
 # Disable Celery apps during build as they require database access
+# Also set STATIC_ROOT to match Vercel's expected output directory
 if IS_BUILD:
     INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in [
         'django_celery_beat',
         'django_celery_results',
     ]]
+    # Vercel expects static files in staticfiles_build directory
+    STATIC_ROOT = BASE_DIR / 'staticfiles_build'
 
 DATABASE_URL = config('DATABASE_URL', default=None)
 if DATABASE_URL:
