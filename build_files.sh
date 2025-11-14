@@ -19,6 +19,11 @@ pip install -r requirements/production.txt
 # STATIC_ROOT is set to staticfiles_build in production settings during build
 python manage.py collectstatic --noinput --clear
 
+# Copy static files to a location accessible by Python function
+# This ensures WhiteNoise can serve them at runtime
+mkdir -p staticfiles
+cp -r staticfiles_build/* staticfiles/ 2>/dev/null || true
+
 # Note: Migrations are skipped during build as they require database access
 # Run migrations separately or configure them to run at runtime
 
