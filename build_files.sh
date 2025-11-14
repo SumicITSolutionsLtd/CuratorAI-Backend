@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Set production environment
+export DJANGO_ENVIRONMENT=production
+export DJANGO_SETTINGS_MODULE=curator.settings.production
+
 # Install dependencies
 pip install -r requirements/production.txt
 

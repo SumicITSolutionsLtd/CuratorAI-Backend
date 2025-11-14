@@ -32,7 +32,8 @@
     }
   ],
   "env": {
-    "DJANGO_SETTINGS_MODULE": "curator.settings.production"
+    "DJANGO_SETTINGS_MODULE": "curator.settings.production",
+    "DJANGO_ENVIRONMENT": "production"
   }
 }
 
