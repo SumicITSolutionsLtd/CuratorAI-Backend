@@ -13,15 +13,26 @@ DATABASES = {
     }
 }
 
-# Add debug toolbar for development
-INSTALLED_APPS += [
-    'debug_toolbar',
-    'django_extensions',
-]
+# Add debug toolbar for development (if available)
+try:
+    import debug_toolbar
+    INSTALLED_APPS += [
+        'debug_toolbar',
+    ]
+    MIDDLEWARE += [
+        'debug_toolbar.middleware.DebugToolbarMiddleware',
+    ]
+except ImportError:
+    pass  # debug_toolbar not installed, skip it
 
-MIDDLEWARE += [
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-]
+# Add django-extensions (if available)
+try:
+    import django_extensions
+    INSTALLED_APPS += [
+        'django_extensions',
+    ]
+except ImportError:
+    pass  # django_extensions not installed, skip it
 
 # Show toolbar for localhost
 INTERNAL_IPS = [
