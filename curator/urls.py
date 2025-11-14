@@ -6,6 +6,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
+from django.shortcuts import render
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -19,16 +20,35 @@ admin.site.index_title = "Welcome to CuratorAI Admin Portal"
 
 
 def api_root(request):
-    """Root API endpoint - shows available endpoints"""
-    return JsonResponse({
-        'message': 'Welcome to CuratorAI API',
-        'version': '1.0.0',
-        'status': 'operational',
-        'documentation': {
-            'swagger': request.build_absolute_uri('/api/schema/swagger-ui/'),
-            'redoc': request.build_absolute_uri('/api/schema/redoc/'),
-            'schema': request.build_absolute_uri('/api/schema/'),
-        },
+    """Root API endpoint - shows HTML landing page or JSON based on Accept header"""
+    # Return JSON if client requests JSON (e.g., API clients)
+    if request.META.get('HTTP_ACCEPT', '').startswith('application/json'):
+        return JsonResponse({
+            'message': 'Welcome to CuratorAI API',
+            'version': '1.0.0',
+            'status': 'operational',
+            'documentation': {
+                'swagger': request.build_absolute_uri('/api/schema/swagger-ui/'),
+                'redoc': request.build_absolute_uri('/api/schema/redoc/'),
+                'schema': request.build_absolute_uri('/api/schema/'),
+            },
+            'endpoints': {
+                'authentication': request.build_absolute_uri('/api/v1/auth/'),
+                'outfits': request.build_absolute_uri('/api/v1/outfits/'),
+                'wardrobe': request.build_absolute_uri('/api/v1/wardrobe/'),
+                'notifications': request.build_absolute_uri('/api/v1/notifications/'),
+                'cart': request.build_absolute_uri('/api/v1/cart/'),
+                'social': request.build_absolute_uri('/api/v1/social/'),
+                'lookbooks': request.build_absolute_uri('/api/v1/lookbooks/'),
+            }
+        })
+    
+    # Return HTML landing page for browsers
+    context = {
+        'api_version': '1.0.0',
+        'swagger_url': request.build_absolute_uri('/api/schema/swagger-ui/'),
+        'redoc_url': request.build_absolute_uri('/api/schema/redoc/'),
+        'admin_url': request.build_absolute_uri('/admin/'),
         'endpoints': {
             'authentication': request.build_absolute_uri('/api/v1/auth/'),
             'outfits': request.build_absolute_uri('/api/v1/outfits/'),
@@ -38,7 +58,8 @@ def api_root(request):
             'social': request.build_absolute_uri('/api/v1/social/'),
             'lookbooks': request.build_absolute_uri('/api/v1/lookbooks/'),
         }
-    })
+    }
+    return render(request, 'landing.html', context)
 
 
 urlpatterns = [

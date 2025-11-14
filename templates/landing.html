@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CuratorAI API - Welcome</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+        
+        .status {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .endpoints {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .endpoint-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+        
+        .endpoint-card:hover {
+            transform: translateX(5px);
+        }
+        
+        .endpoint-card h3 {
+            color: #667eea;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+        
+        .endpoint-card a {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+        
+        .endpoint-card a:hover {
+            color: #667eea;
+            text-decoration: underline;
+        }
+        
+        .version {
+            text-align: center;
+            color: #999;
+            margin-top: 30px;
+            font-size: 0.9em;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box p {
+            margin: 0;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 CuratorAI API</h1>
+        <p class="subtitle">AI-powered Fashion Recommendation Platform</p>
+        <div style="text-align: center;">
+            <span class="status">● Operational</span>
+            <span style="color: #999; margin-left: 10px;">Version {{ api_version }}</span>
+        </div>
+        
+        <div class="info-box">
+            <p><strong>📚 Documentation:</strong> Explore the interactive API documentation using Swagger UI or ReDoc below.</p>
+        </div>
+        
+        <div class="section">
+            <h2>🚀 Quick Access</h2>
+            <div class="button-group">
+                <a href="{{ swagger_url }}" class="btn btn-primary" target="_blank">
+                    📖 Swagger UI
+                </a>
+                <a href="{{ redoc_url }}" class="btn btn-secondary" target="_blank">
+                    📘 ReDoc
+                </a>
+                <a href="{{ admin_url }}" class="btn btn-success" target="_blank">
+                    ⚙️ Admin Panel
+                </a>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔗 API Endpoints</h2>
+            <div class="endpoints">
+                <div class="endpoint-card">
+                    <h3>Authentication</h3>
+                    <a href="{{ endpoints.authentication }}" target="_blank">{{ endpoints.authentication }}</a>
+                </div>
+                <div class="endpoint-card">
+                    <h3>Outfits</h3>
+                    <a href="{{ endpoints.outfits }}" target="_blank">{{ endpoints.outfits }}</a>
+                </div>
+                <div class="endpoint-card">
+                    <h3>Wardrobe</h3>
+                    <a href="{{ endpoints.wardrobe }}" target="_blank">{{ endpoints.wardrobe }}</a>
+                </div>
+                <div class="endpoint-card">
+                    <h3>Social Feed</h3>
+                    <a href="{{ endpoints.social }}" target="_blank">{{ endpoints.social }}</a>
+                </div>
+                <div class="endpoint-card">
+                    <h3>Lookbooks</h3>
+                    <a href="{{ endpoints.lookbooks }}" target="_blank">{{ endpoints.lookbooks }}</a>
+                </div>
+                <div class="endpoint-card">
+                    <h3>Notifications</h3>
+                    <a href="{{ endpoints.notifications }}" target="_blank">{{ endpoints.notifications }}</a>
+                </div>
+                <div class="endpoint-card">
+                    <h3>Shopping Cart</h3>
+                    <a href="{{ endpoints.cart }}" target="_blank">{{ endpoints.cart }}</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="version">
+            <p>CuratorAI API v{{ api_version }} | Status: Operational ✅</p>
+            <p style="margin-top: 10px; color: #999;">
+                For API requests, use: <code>Accept: application/json</code> header or visit <a href="{{ swagger_url }}" style="color: #667eea;">Swagger UI</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -46,14 +46,8 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 # Production logging
-LOGGING['handlers']['file'] = {
-    'class': 'logging.handlers.RotatingFileHandler',
-    'filename': BASE_DIR / 'logs' / 'django.log',
-    'maxBytes': 1024 * 1024 * 10,  # 10MB
-    'backupCount': 10,
-    'formatter': 'verbose',
-}
-
-LOGGING['root']['handlers'] = ['console', 'file']
+# Use only console handler for Vercel/serverless environments
+# Vercel automatically captures console output in their logging system
+LOGGING['root']['handlers'] = ['console']
 LOGGING['root']['level'] = 'INFO'
 

@@ -2,13 +2,22 @@
 Serializers for notifications app.
 """
 from rest_framework import serializers
-from apps.accounts.serializers import UserSerializer
+from apps.accounts.models import User
 from .models import Notification, NotificationPreference
+
+
+class ActorSerializer(serializers.ModelSerializer):
+    """Minimal serializer for actor in notifications."""
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'avatar']
+        read_only_fields = ['id', 'username', 'avatar']
 
 
 class NotificationSerializer(serializers.ModelSerializer):
     """Serializer for notifications."""
-    actor = UserSerializer(read_only=True, fields=['id', 'username', 'avatar'])
+    actor = ActorSerializer(read_only=True)
     
     class Meta:
         model = Notification
