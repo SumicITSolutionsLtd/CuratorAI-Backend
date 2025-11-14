@@ -42,15 +42,27 @@ DATABASE_URL = config('DATABASE_URL', default=None)
 if DATABASE_URL:
     DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
 elif IS_BUILD:
-    # Use in-memory SQLite during build to avoid file system and connection errors
+    # During build, use PostgreSQL with dummy connection to avoid SQLite dependency
+    # SQLite is not available in Vercel build environment
+    # This will fail gracefully if Django tries to connect (which it shouldn't during collectstatic)
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',  # In-memory database for build
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'build_db',
+            'USER': 'build_user',
+            'PASSWORD': 'build_pass',
+            'HOST': 'localhost',
+            'PORT': '5432',
+            'OPTIONS': {
+                'connect_timeout': 1,  # Fail fast if connection attempted
+            },
         }
     }
+    # Prevent database connection during build by setting connection max age to 0
+    DATABASES['default']['CONN_MAX_AGE'] = 0
 else:
     # Use SQLite for Vercel runtime (ephemeral, but works for testing)
+    # Note: This requires SQLite to be available at runtime
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

@@ -6,6 +6,12 @@ export DJANGO_ENVIRONMENT=production
 export DJANGO_SETTINGS_MODULE=curator.settings.production
 export DJANGO_BUILD_MODE=1  # Indicate we're in build mode
 
+# Set a dummy DATABASE_URL if not already set to avoid SQLite (not available in Vercel build)
+# This prevents Django from trying to use SQLite during build
+if [ -z "$DATABASE_URL" ]; then
+    export DATABASE_URL="postgresql://build_user:build_pass@localhost:5432/build_db"
+fi
+
 # Install dependencies
 pip install -r requirements/production.txt
 
