@@ -41,6 +41,18 @@ EMAIL_HOST_USER=your-email@gmail.com
 EMAIL_HOST_PASSWORD=your-app-specific-password
 
 # ============================================
+# OAUTH CONFIGURATION (Optional)
+# ============================================
+
+# Google OAuth
+GOOGLE_OAUTH_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=your-google-client-secret
+
+# Facebook OAuth
+FACEBOOK_APP_ID=your-facebook-app-id
+FACEBOOK_APP_SECRET=your-facebook-app-secret
+
+# ============================================
 # HOW TO ADD TO VERCEL
 # ============================================
 

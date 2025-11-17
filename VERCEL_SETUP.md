@@ -49,7 +49,7 @@ DJANGO_DEBUG=False
 ALLOWED_HOSTS=curator-ai-backend.vercel.app,*.vercel.app
 
 # Database (if using PostgreSQL)
-DATABASE_URL=postgresql://user:password@host:port/dbname
+DATABASE_URL=postgresql://neondb_owner:npg_SI0EtvN1nMax@ep-wandering-smoke-ah247j6v-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
 
 # Admin User (optional - for auto-creation)
 ADMIN_USERNAME=admin

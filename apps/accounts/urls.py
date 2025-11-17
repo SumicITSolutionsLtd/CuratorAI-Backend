@@ -19,6 +19,7 @@ from .views import (
     SearchUsersView,
     DeleteAccountView,
 )
+from .oauth_views import GoogleOAuthView, FacebookOAuthView
 
 app_name = 'accounts'
 
@@ -28,6 +29,10 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # OAuth Authentication
+    path('oauth/google/', GoogleOAuthView.as_view(), name='oauth-google'),
+    path('oauth/facebook/', FacebookOAuthView.as_view(), name='oauth-facebook'),
     
     # Password Reset
     path('password-reset/request/', RequestPasswordResetView.as_view(), name='password-reset-request'),

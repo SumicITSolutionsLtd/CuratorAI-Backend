@@ -36,17 +36,56 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        # Check if migrations have been run
+        from django.db import connection
+        tables = connection.introspection.table_names()
+        
+        if 'users' not in tables or 'outfits' not in tables:
+            self.stdout.write(self.style.ERROR(
+                '\n❌ ERROR: Database tables do not exist!\n'
+                'Please run migrations first:\n'
+                '  python manage.py migrate\n'
+                'Then run this command again.\n'
+            ))
+            return
+        
         if options['clear']:
             self.stdout.write(self.style.WARNING('Clearing existing data...'))
-            OutfitSave.objects.all().delete()
-            OutfitLike.objects.all().delete()
-            OutfitItem.objects.all().delete()
-            Outfit.objects.all().delete()
-            UserFollowing.objects.all().delete()
-            StylePreference.objects.all().delete()
-            UserProfile.objects.all().delete()
-            User.objects.filter(is_superuser=False).delete()
-            self.stdout.write(self.style.SUCCESS('Cleared existing data'))
+            try:
+                # Delete in order to respect foreign key constraints
+                from django.db import connection
+                tables = connection.introspection.table_names()
+                
+                if 'outfit_saves' in tables:
+                    OutfitSave.objects.all().delete()
+                if 'outfit_likes' in tables:
+                    OutfitLike.objects.all().delete()
+                if 'outfit_items' in tables:
+                    OutfitItem.objects.all().delete()
+                if 'outfits' in tables:
+                    Outfit.objects.all().delete()
+                if 'user_following' in tables:
+                    UserFollowing.objects.all().delete()
+                if 'style_preferences' in tables:
+                    StylePreference.objects.all().delete()
+                if 'user_profiles' in tables:
+                    UserProfile.objects.all().delete()
+                if 'users' in tables:
+                    # Delete users one by one to avoid cascade issues with missing tables
+                    non_superusers = User.objects.filter(is_superuser=False)
+                    count = non_superusers.count()
+                    for user in non_superusers:
+                        try:
+                            user.delete()
+                        except Exception:
+                            # If cascade delete fails due to missing tables, continue
+                            pass
+                    self.stdout.write(self.style.SUCCESS(f'Deleted {count} users'))
+                self.stdout.write(self.style.SUCCESS('Cleared existing data'))
+            except Exception as e:
+                # Don't fail completely if some tables are missing
+                self.stdout.write(self.style.WARNING(f'Warning during clear: {e}'))
+                self.stdout.write(self.style.SUCCESS('Continuing with seeding...'))
 
         self.stdout.write(self.style.SUCCESS('Starting database seeding...'))
 
@@ -121,51 +160,65 @@ class Command(BaseCommand):
         for i in range(min(count, len(user_data))):
             data = user_data[i]
 
-            # Create user
-            user = User.objects.create_user(
-                username=data['username'],
+            # Check if user already exists
+            user, created = User.objects.get_or_create(
                 email=data['email'],
-                password='testpass123',
-                first_name=data['first_name'],
-                last_name=data['last_name'],
-                is_verified=random.choice([True, True, True, False]),  # 75% verified
-                bio=self.generate_bio(data['first_name'])
+                defaults={
+                    'username': data['username'],
+                    'password': 'pbkdf2_sha256$720000$dummy$dummy',  # Will be set below
+                    'first_name': data['first_name'],
+                    'last_name': data['last_name'],
+                    'is_verified': random.choice([True, True, True, False]),  # 75% verified
+                    'bio': self.generate_bio(data['first_name'])
+                }
             )
+            
+            # If user was just created, set the password properly
+            if created:
+                user.set_password('testpass123')
+                user.save()
+                
+                # Create profile
+                city, country = random.choice(cities)
+                gender = random.choice(['M', 'F', 'O'])
 
-            # Create profile
-            city, country = random.choice(cities)
-            gender = random.choice(['M', 'F', 'O'])
+                UserProfile.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'gender': gender,
+                        'date_of_birth': datetime.now().date() - timedelta(days=random.randint(7300, 14600)),  # 20-40 years old
+                        'country': country,
+                        'city': city,
+                        'body_type': random.choice(['slim', 'athletic', 'average', 'curvy', 'plus']),
+                        'height': random.randint(155, 190),
+                        'weight': random.randint(50, 100),
+                        'top_size': random.choice(['XS', 'S', 'M', 'L', 'XL']),
+                        'bottom_size': random.choice(['26', '28', '30', '32', '34', '36']),
+                        'shoe_size': random.choice(['7', '8', '9', '10', '11']),
+                        'dress_size': random.choice(['0', '2', '4', '6', '8', '10', '12'])
+                    }
+                )
 
-            UserProfile.objects.create(
-                user=user,
-                gender=gender,
-                date_of_birth=datetime.now().date() - timedelta(days=random.randint(7300, 14600)),  # 20-40 years old
-                country=country,
-                city=city,
-                body_type=random.choice(['slim', 'athletic', 'average', 'curvy', 'plus']),
-                height=random.randint(155, 190),
-                weight=random.randint(50, 100),
-                top_size=random.choice(['XS', 'S', 'M', 'L', 'XL']),
-                bottom_size=random.choice(['26', '28', '30', '32', '34', '36']),
-                shoe_size=random.choice(['7', '8', '9', '10', '11']),
-                dress_size=random.choice(['0', '2', '4', '6', '8', '10', '12'])
-            )
-
-            # Create style preferences
-            StylePreference.objects.create(
-                user=user,
-                preferred_styles=random.sample(style_options, k=random.randint(2, 5)),
-                preferred_colors=random.sample(color_options, k=random.randint(3, 7)),
-                preferred_brands=random.sample(brand_options, k=random.randint(2, 6)),
-                preferred_patterns=['solid', 'stripes', 'floral', 'geometric', 'abstract'][:random.randint(1, 3)],
-                budget_min=Decimal(random.choice([0, 50, 100, 200])),
-                budget_max=Decimal(random.choice([500, 1000, 2000, 5000])),
-                currency='USD',
-                occasions=random.sample(['work', 'casual', 'formal', 'party', 'sport', 'date'], k=random.randint(2, 4)),
-                prefer_sustainable=random.choice([True, False]),
-                prefer_secondhand=random.choice([True, False]),
-                fit_preference=random.choice(['loose', 'regular', 'tight', 'oversized', 'fitted'])
-            )
+                # Create style preferences
+                StylePreference.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'preferred_styles': random.sample(style_options, k=random.randint(2, 5)),
+                        'preferred_colors': random.sample(color_options, k=random.randint(3, 7)),
+                        'preferred_brands': random.sample(brand_options, k=random.randint(2, 6)),
+                        'preferred_patterns': ['solid', 'stripes', 'floral', 'geometric', 'abstract'][:random.randint(1, 3)],
+                        'budget_min': Decimal(random.choice([0, 50, 100, 200])),
+                        'budget_max': Decimal(random.choice([500, 1000, 2000, 5000])),
+                        'currency': 'USD',
+                        'occasions': random.sample(['work', 'casual', 'formal', 'party', 'sport', 'date'], k=random.randint(2, 4)),
+                        'prefer_sustainable': random.choice([True, False]),
+                        'prefer_secondhand': random.choice([True, False]),
+                        'fit_preference': random.choice(['loose', 'regular', 'tight', 'oversized', 'fitted'])
+                    }
+                )
+            else:
+                # User already exists, skip
+                self.stdout.write(self.style.WARNING(f'User {data["email"]} already exists, skipping...'))
 
             users.append(user)
 
