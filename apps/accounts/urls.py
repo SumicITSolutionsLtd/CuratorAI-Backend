@@ -18,6 +18,7 @@ from .views import (
     ConfirmEmailVerificationView,
     SearchUsersView,
     DeleteAccountView,
+    CompleteRegistrationView,
 )
 from .oauth_views import GoogleOAuthView, FacebookOAuthView
 
@@ -26,6 +27,7 @@ app_name = 'accounts'
 urlpatterns = [
     # Authentication
     path('register/', RegisterView.as_view(), name='register'),
+    path('register/complete/', CompleteRegistrationView.as_view(), name='complete-registration'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),

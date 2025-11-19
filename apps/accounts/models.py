@@ -19,6 +19,10 @@ class User(AbstractUser):
     oauth_provider = models.CharField(max_length=50, blank=True, null=True)
     oauth_id = models.CharField(max_length=255, blank=True, null=True)
     
+    # Terms and conditions
+    terms_and_conditions_accepted = models.BooleanField(default=False)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True, help_text='Timestamp when user accepted terms and conditions')
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

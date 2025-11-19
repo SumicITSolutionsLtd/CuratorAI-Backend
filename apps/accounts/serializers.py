@@ -3,6 +3,7 @@ Serializers for accounts app.
 """
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from django.utils import timezone
 from .models import User, UserProfile, StylePreference, UserFollowing
 
 
@@ -33,10 +34,11 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'avatar', 'bio', 'is_verified', 'profile', 'style_preference',
+            'avatar', 'bio', 'is_verified', 'terms_and_conditions_accepted',
+            'terms_accepted_at', 'profile', 'style_preference',
             'followers_count', 'following_count', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'is_verified', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'is_verified', 'terms_accepted_at', 'created_at', 'updated_at']
     
     def get_followers_count(self, obj):
         return obj.followers.count()
@@ -49,24 +51,31 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     """Serializer for user registration."""
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
+    terms_and_conditions_accepted = serializers.BooleanField(required=True, write_only=True)
     
     class Meta:
         model = User
-        fields = ['email', 'username', 'password', 'password2', 'first_name', 'last_name']
+        fields = ['email', 'username', 'password', 'password2', 'first_name', 'last_name', 'terms_and_conditions_accepted']
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
+        if not attrs.get('terms_and_conditions_accepted', False):
+            raise serializers.ValidationError({"terms_and_conditions_accepted": "You must accept the terms and conditions to register."})
         return attrs
     
     def create(self, validated_data):
         validated_data.pop('password2')
+        terms_accepted = validated_data.pop('terms_and_conditions_accepted')
+        
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
             first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', '')
+            last_name=validated_data.get('last_name', ''),
+            terms_and_conditions_accepted=terms_accepted,
+            terms_accepted_at=timezone.now() if terms_accepted else None
         )
         
         # Create related profile and style preference
@@ -119,4 +128,55 @@ class UserFollowingSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserFollowing
         fields = ['id', 'follower', 'following', 'created_at']
+
+
+class StylePreferenceCompletionSerializer(serializers.Serializer):
+    """Serializer for completing registration with style preferences."""
+    # I shop for - single select
+    shop_for = serializers.ChoiceField(
+        choices=['Men', 'Women', 'Non-binary', 'Prefer not to say'],
+        required=True,
+        help_text="Shopping preference: Men, Women, Non-binary, or Prefer not to say"
+    )
+    
+    # My style - multi-select
+    styles = serializers.ListField(
+        child=serializers.ChoiceField(choices=[
+            'Casual', 'Formal', 'Streetwear', 'Bohemian', 
+            'Minimalist', 'Vintage', 'Athletic', 'Trendy'
+        ]),
+        required=True,
+        allow_empty=False,
+        help_text="List of preferred styles (at least one required)"
+    )
+    
+    # I dress for - multi-select
+    dress_for = serializers.ListField(
+        child=serializers.ChoiceField(choices=[
+            'Work', 'Casual', 'Date Night', 'Party', 
+            'Gym', 'Travel', 'Beach', 'Wedding'
+        ]),
+        required=True,
+        allow_empty=False,
+        help_text="List of occasions to dress for (at least one required)"
+    )
+    
+    # My budget range - single select
+    budget_range = serializers.ChoiceField(
+        choices=['Budget-friendly ($)', 'Mid-range ($$)', 'Premium ($$$)', 'Luxury ($$$$)'],
+        required=True,
+        help_text="Budget range: Budget-friendly ($), Mid-range ($$), Premium ($$$), or Luxury ($$$$)"
+    )
+    
+    def validate_styles(self, value):
+        """Validate that at least one style is selected."""
+        if not value or len(value) == 0:
+            raise serializers.ValidationError("At least one style must be selected.")
+        return value
+    
+    def validate_dress_for(self, value):
+        """Validate that at least one occasion is selected."""
+        if not value or len(value) == 0:
+            raise serializers.ValidationError("At least one occasion must be selected.")
+        return value
 

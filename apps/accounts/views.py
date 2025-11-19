@@ -11,13 +11,15 @@ from django.db.models import Q
 from datetime import timedelta
 import random
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from .models import User, UserFollowing, PasswordResetCode, EmailVerificationCode
+from .models import User, UserProfile, StylePreference, UserFollowing, PasswordResetCode, EmailVerificationCode
 from .serializers import (
     UserSerializer,
     UserRegisterSerializer,
     UserUpdateSerializer,
-    UserFollowingSerializer
+    UserFollowingSerializer,
+    StylePreferenceCompletionSerializer
 )
+from decimal import Decimal
 
 
 class RegisterView(generics.CreateAPIView):
@@ -568,4 +570,73 @@ class DeleteAccountView(views.APIView):
         user.save()
         
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CompleteRegistrationView(views.APIView):
+    """
+    Complete registration by setting up user style preferences.
+    
+    Note: This endpoint requires authentication. After registration, users receive
+    JWT tokens which should be used to authenticate this request. This is the
+    second step in the registration flow (after initial account creation).
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary="Complete registration",
+        description="Complete user registration by setting up style preferences (shop for, styles, dress for, budget)",
+        tags=["Authentication"],
+        request=StylePreferenceCompletionSerializer,
+        responses={200: UserSerializer}
+    )
+    def post(self, request):
+        serializer = StylePreferenceCompletionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user = request.user
+        validated_data = serializer.validated_data
+        
+        # Map shop_for to gender in UserProfile
+        shop_for_mapping = {
+            'Men': 'M',
+            'Women': 'F',
+            'Non-binary': 'O',
+            'Prefer not to say': 'N'
+        }
+        gender = shop_for_mapping.get(validated_data['shop_for'])
+        
+        # Update user profile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.gender = gender
+        profile.save()
+        
+        # Update style preferences
+        style_pref, _ = StylePreference.objects.get_or_create(user=user)
+        
+        # Set preferred styles
+        style_pref.preferred_styles = validated_data['styles']
+        
+        # Set occasions (dress_for)
+        style_pref.occasions = validated_data['dress_for']
+        
+        # Map budget_range to budget_min and budget_max
+        budget_mapping = {
+            'Budget-friendly ($)': {'min': Decimal('0'), 'max': Decimal('100')},
+            'Mid-range ($$)': {'min': Decimal('100'), 'max': Decimal('500')},
+            'Premium ($$$)': {'min': Decimal('500'), 'max': Decimal('2000')},
+            'Luxury ($$$$)': {'min': Decimal('2000'), 'max': Decimal('10000')}
+        }
+        budget = budget_mapping.get(validated_data['budget_range'], {'min': Decimal('0'), 'max': Decimal('1000')})
+        style_pref.budget_min = budget['min']
+        style_pref.budget_max = budget['max']
+        
+        style_pref.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Registration completed successfully',
+            'data': {
+                'user': UserSerializer(user).data
+            }
+        }, status=status.HTTP_200_OK)
 
