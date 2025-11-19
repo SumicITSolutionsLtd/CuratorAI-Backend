@@ -8,9 +8,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.utils import timezone
 from allauth.socialaccount.models import SocialAccount
 from drf_spectacular.utils import extend_schema
 from .serializers import UserSerializer
+from .models import UserProfile, StylePreference
 
 User = get_user_model()
 
@@ -142,8 +144,14 @@ class GoogleOAuthView(views.APIView):
                     username=username,
                     first_name=first_name,
                     last_name=last_name,
-                    is_verified=True  # Google emails are verified
+                    is_verified=True,  # Google emails are verified
+                    terms_and_conditions_accepted=True,  # OAuth users implicitly accept terms
+                    terms_accepted_at=timezone.now()
                 )
+                
+                # Create related profile and style preference (same as regular registration)
+                UserProfile.objects.create(user=user)
+                StylePreference.objects.create(user=user)
                 
                 # Create social account
                 SocialAccount.objects.create(
@@ -336,8 +344,14 @@ class FacebookOAuthView(views.APIView):
                     username=username,
                     first_name=first_name or name.split()[0] if name else '',
                     last_name=last_name or ' '.join(name.split()[1:]) if name and len(name.split()) > 1 else '',
-                    is_verified=False  # Facebook emails may not be verified
+                    is_verified=False,  # Facebook emails may not be verified
+                    terms_and_conditions_accepted=True,  # OAuth users implicitly accept terms
+                    terms_accepted_at=timezone.now()
                 )
+                
+                # Create related profile and style preference (same as regular registration)
+                UserProfile.objects.create(user=user)
+                StylePreference.objects.create(user=user)
                 
                 # Create social account
                 SocialAccount.objects.create(
