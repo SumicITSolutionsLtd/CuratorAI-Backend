@@ -26,7 +26,18 @@ if env_local.exists():
                     os.environ[key] = value
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# In production, this MUST be set via DJANGO_SECRET_KEY environment variable
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-replace-me-in-production')
+
+# Warn if using default secret key in production
+import os
+if os.environ.get('DJANGO_SETTINGS_MODULE') == 'curator.settings.production' and SECRET_KEY == 'django-insecure-replace-me-in-production':
+    import warnings
+    warnings.warn(
+        "⚠️ SECURITY WARNING: Using default SECRET_KEY in production! "
+        "Set DJANGO_SECRET_KEY environment variable in Vercel.",
+        UserWarning
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)

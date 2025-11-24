@@ -7,7 +7,29 @@ import dj_database_url
 DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
 # Vercel/Production specific settings
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='curator-ai-backend.vercel.app,*.vercel.app,localhost,127.0.0.1', cast=Csv())
+# ALLOWED_HOSTS handling for Vercel's dynamic domains
+import os
+
+# Get ALLOWED_HOSTS from environment variable
+allowed_hosts_str = config('ALLOWED_HOSTS', default='', cast=str)
+if allowed_hosts_str:
+    ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
+else:
+    # Default to localhost if not specified
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+# Vercel provides VERCEL_URL environment variable with the current deployment URL
+# Format: backend-zeta-henna-62.vercel.app (no protocol)
+vercel_url = os.environ.get('VERCEL_URL', '')
+if vercel_url:
+    # Remove protocol if present
+    vercel_host = vercel_url.replace('https://', '').replace('http://', '')
+    if vercel_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(vercel_host)
+
+# Also check HTTP_HOST header at runtime (handled by custom middleware if needed)
+# For now, we'll rely on VERCEL_URL being set correctly
+# If VERCEL_URL is not set, user must configure ALLOWED_HOSTS environment variable
 
 # Security settings (adjusted for Vercel)
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
@@ -21,8 +43,21 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 SECURE_HSTS_PRELOAD = False
 
 # CORS settings for production
+# Allow all origins if explicitly set, otherwise use specific origins
 CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://curator-ai-phi.vercel.app', cast=Csv())
+
+# Get CORS allowed origins from environment
+cors_origins_str = config('CORS_ALLOWED_ORIGINS', default='', cast=str)
+if cors_origins_str:
+    CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
+else:
+    # Default to frontend domain
+    CORS_ALLOWED_ORIGINS = [
+        'https://curator-ai-phi.vercel.app',
+        'http://localhost:3000',
+        'http://localhost:5173',
+    ]
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     'DELETE',
