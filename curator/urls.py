@@ -18,7 +18,6 @@ admin.site.site_header = "CuratorAI Admin"
 admin.site.site_title = "CuratorAI Admin Portal"
 admin.site.index_title = "Welcome to CuratorAI Admin Portal"
 
-
 def api_root(request):
     """Root API endpoint - shows HTML landing page or JSON based on Accept header"""
     # Return JSON if client requests JSON (e.g., API clients)
