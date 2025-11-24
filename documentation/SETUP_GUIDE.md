@@ -256,10 +256,17 @@ Superuser created successfully.
 ## 🚀 Step 8: Start Development Server
 
 **Start the Django development server:**
+venv\Scripts\activate.bat
+
 
 ```bash
 python manage.py runserver
 ```
+
+or 
+
+venv\Scripts\python.exe manage.py runserver
+
 
 **✅ Success:** You should see:
 ```
@@ -411,6 +418,16 @@ Once everything is set up, here's your daily workflow:
   py -m pip install ...     # Install packages (before venv activation)
   ```
 - After activating virtual environment (`venv\Scripts\activate.bat`), `python` should work
+- **If `python` still doesn't work after activating venv** (Windows Store app alias issue):
+  - **Quick fix:** Use the full path to venv's Python:
+    ```cmd
+    venv\Scripts\python.exe manage.py runserver
+    venv\Scripts\python.exe manage.py migrate
+    ```
+  - **Permanent fix:** Disable Windows Store app execution aliases:
+    1. Open **Settings** → **Apps** → **Advanced app settings** → **App execution aliases**
+    2. Turn OFF the toggles for `python.exe` and `python3.exe`
+    3. Restart your terminal and try `python` again
 - If `py` also doesn't work, Python may not be installed - download from https://www.python.org/downloads/
 
 ### Issue 2: "pip: command not found"
