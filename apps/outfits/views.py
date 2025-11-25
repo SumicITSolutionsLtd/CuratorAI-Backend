@@ -1,12 +1,13 @@
 """
 Views for outfits app.
 """
-from rest_framework import generics, status, views
+from rest_framework import generics, status, views, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.db.models import Q
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer, OpenApiTypes
 from core.permissions import IsOwnerOrReadOnly
+from core.serializers import ValidationErrorResponse, UnauthorizedErrorResponse, NotFoundErrorResponse, ForbiddenErrorResponse
 from .models import Outfit, OutfitLike, OutfitSave
 from .serializers import OutfitSerializer, OutfitCreateSerializer
 
@@ -50,7 +51,25 @@ class OutfitListCreateView(generics.ListCreateAPIView):
     @extend_schema(
         summary="List outfits",
         description="Get paginated list of public outfits with optional filters",
-        tags=["Outfits"]
+        tags=["Outfits"],
+        parameters=[
+            OpenApiParameter(name='occasion', description='Filter by occasion', required=False, type=str),
+            OpenApiParameter(name='season', description='Filter by season', required=False, type=str),
+            OpenApiParameter(name='search', description='Search in title and description', required=False, type=str),
+            OpenApiParameter(name='page', description='Page number', required=False, type=int),
+        ],
+        responses={
+            200: inline_serializer(
+                name='OutfitListResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'next': serializers.URLField(allow_null=True),
+                    'previous': serializers.URLField(allow_null=True),
+                    'results': OutfitSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -58,7 +77,20 @@ class OutfitListCreateView(generics.ListCreateAPIView):
     @extend_schema(
         summary="Create outfit",
         description="Create a new outfit with items",
-        tags=["Outfits"]
+        tags=["Outfits"],
+        request=OutfitCreateSerializer,
+        responses={
+            201: inline_serializer(
+                name='OutfitCreateResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': OutfitSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
@@ -82,7 +114,19 @@ class OutfitDetailView(generics.RetrieveUpdateDestroyAPIView):
     @extend_schema(
         summary="Get outfit details",
         description="Retrieve detailed information about a specific outfit",
-        tags=["Outfits"]
+        tags=["Outfits"],
+        responses={
+            200: inline_serializer(
+                name='OutfitDetailResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': OutfitSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -90,7 +134,22 @@ class OutfitDetailView(generics.RetrieveUpdateDestroyAPIView):
     @extend_schema(
         summary="Update outfit",
         description="Update outfit details (owner only)",
-        tags=["Outfits"]
+        tags=["Outfits"],
+        request=OutfitCreateSerializer,
+        responses={
+            200: inline_serializer(
+                name='OutfitUpdateResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': OutfitSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
@@ -98,7 +157,13 @@ class OutfitDetailView(generics.RetrieveUpdateDestroyAPIView):
     @extend_schema(
         summary="Delete outfit",
         description="Delete an outfit (owner only)",
-        tags=["Outfits"]
+        tags=["Outfits"],
+        responses={
+            204: OpenApiTypes.NONE,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
@@ -113,7 +178,19 @@ class OutfitLikeView(views.APIView):
     @extend_schema(
         summary="Like outfit",
         description="Like or unlike an outfit",
-        tags=["Outfits"]
+        tags=["Outfits"],
+        responses={
+            200: inline_serializer(
+                name='OutfitLikeResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'likes_count': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, pk):
         try:
@@ -158,7 +235,25 @@ class OutfitSaveView(views.APIView):
     @extend_schema(
         summary="Save outfit",
         description="Save or unsave an outfit to user's collection",
-        tags=["Outfits"]
+        tags=["Outfits"],
+        request=inline_serializer(
+            name='SaveOutfitRequest',
+            fields={
+                'collection_name': serializers.CharField(required=False, allow_blank=True),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='OutfitSaveResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'saves_count': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, pk):
         try:
@@ -211,7 +306,23 @@ class UserOutfitsView(generics.ListAPIView):
     @extend_schema(
         summary="Get user outfits",
         description="List all public outfits by a specific user",
-        tags=["Outfits"]
+        tags=["Outfits"],
+        parameters=[
+            OpenApiParameter(name='page', description='Page number', required=False, type=int),
+        ],
+        responses={
+            200: inline_serializer(
+                name='UserOutfitsResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'next': serializers.URLField(allow_null=True),
+                    'previous': serializers.URLField(allow_null=True),
+                    'results': OutfitSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)

@@ -1,12 +1,13 @@
 """
 Views for cart app.
 """
-from rest_framework import generics, status, views
+from rest_framework import generics, status, views, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiTypes
+from core.serializers import ValidationErrorResponse, UnauthorizedErrorResponse, NotFoundErrorResponse, ForbiddenErrorResponse
 from .models import ShoppingCart, CartItem, PromoCode
 from .serializers import ShoppingCartSerializer, CartItemSerializer, AddToCartSerializer
 
@@ -21,7 +22,19 @@ class GetCartView(generics.RetrieveAPIView):
     @extend_schema(
         summary="Get cart",
         description="Retrieve user's shopping cart with all items",
-        tags=["Shopping Cart"]
+        tags=["Shopping Cart"],
+        responses={
+            200: inline_serializer(
+                name='GetCartResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': ShoppingCartSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+        }
     )
     def get_object(self):
         user_id = self.kwargs.get('user_id')
@@ -45,7 +58,19 @@ class AddToCartView(views.APIView):
         summary="Add to cart",
         description="Add an item to the shopping cart",
         tags=["Shopping Cart"],
-        request=AddToCartSerializer
+        request=AddToCartSerializer,
+        responses={
+            201: inline_serializer(
+                name='AddToCartResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'data': ShoppingCartSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+        }
     )
     def post(self, request, user_id):
         # Ensure user can only add to their own cart
@@ -94,7 +119,26 @@ class UpdateCartItemView(views.APIView):
     @extend_schema(
         summary="Update cart item",
         description="Update quantity of a cart item",
-        tags=["Shopping Cart"]
+        tags=["Shopping Cart"],
+        request=inline_serializer(
+            name='UpdateCartItemRequest',
+            fields={
+                'quantity': serializers.IntegerField(required=True, min_value=1),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='UpdateCartItemResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'data': ShoppingCartSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def patch(self, request, user_id, item_id):
         # Ensure user can only update their own cart
@@ -134,7 +178,20 @@ class RemoveFromCartView(views.APIView):
     @extend_schema(
         summary="Remove from cart",
         description="Remove an item from the shopping cart",
-        tags=["Shopping Cart"]
+        tags=["Shopping Cart"],
+        responses={
+            200: inline_serializer(
+                name='RemoveFromCartResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': ShoppingCartSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def delete(self, request, user_id, item_id):
         # Ensure user can only remove from their own cart
@@ -167,7 +224,29 @@ class ApplyPromoCodeView(views.APIView):
     @extend_schema(
         summary="Apply promo code",
         description="Apply a promotional code to the cart",
-        tags=["Shopping Cart"]
+        tags=["Shopping Cart"],
+        request=inline_serializer(
+            name='ApplyPromoCodeRequest',
+            fields={
+                'code': serializers.CharField(required=True),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='ApplyPromoCodeResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'promo_code': serializers.CharField(),
+                    'discount': serializers.FloatField(),
+                    'discount_percentage': serializers.FloatField(),
+                    'data': ShoppingCartSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+        }
     )
     def post(self, request, user_id):
         # Ensure user can only apply to their own cart
@@ -232,7 +311,19 @@ class RemovePromoCodeView(views.APIView):
     @extend_schema(
         summary="Remove promo code",
         description="Remove promotional code from cart",
-        tags=["Shopping Cart"]
+        tags=["Shopping Cart"],
+        responses={
+            200: inline_serializer(
+                name='RemovePromoCodeResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': ShoppingCartSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+        }
     )
     def delete(self, request, user_id):
         # Ensure user can only remove from their own cart
@@ -264,7 +355,12 @@ class ClearCartView(views.APIView):
     @extend_schema(
         summary="Clear cart",
         description="Remove all items from the shopping cart",
-        tags=["Shopping Cart"]
+        tags=["Shopping Cart"],
+        responses={
+            204: OpenApiTypes.NONE,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+        }
     )
     def delete(self, request, user_id):
         # Ensure user can only clear their own cart
@@ -295,7 +391,28 @@ class CalculateShippingView(views.APIView):
     @extend_schema(
         summary="Calculate shipping",
         description="Calculate shipping costs for cart items",
-        tags=["Shopping Cart"]
+        tags=["Shopping Cart"],
+        responses={
+            200: inline_serializer(
+                name='CalculateShippingResponse',
+                fields={
+                    'shipping_methods': serializers.ListField(
+                        child=inline_serializer(
+                            name='ShippingMethod',
+                            fields={
+                                'id': serializers.CharField(),
+                                'name': serializers.CharField(),
+                                'price': serializers.FloatField(),
+                                'currency': serializers.CharField(),
+                                'estimated_days': serializers.CharField(),
+                            }
+                        )
+                    ),
+                    'recommended': serializers.CharField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+        }
     )
     def post(self, request):
         # For now, return simple shipping methods

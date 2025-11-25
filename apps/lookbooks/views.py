@@ -1,11 +1,12 @@
 """
 Views for lookbooks app.
 """
-from rest_framework import generics, status, views
+from rest_framework import generics, status, views, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer, OpenApiTypes
+from core.serializers import ValidationErrorResponse, UnauthorizedErrorResponse, NotFoundErrorResponse, ForbiddenErrorResponse
 from .models import Lookbook, LookbookLike
 from .serializers import LookbookSerializer, LookbookCreateSerializer
 
@@ -25,7 +26,20 @@ class LookbookListView(generics.ListAPIView):
             OpenApiParameter(name='season', description='Filter by season', required=False, type=str),
             OpenApiParameter(name='occasion', description='Filter by occasion', required=False, type=str),
             OpenApiParameter(name='featured', description='Show only featured', required=False, type=bool),
-        ]
+            OpenApiParameter(name='page', description='Page number', required=False, type=int),
+        ],
+        responses={
+            200: inline_serializer(
+                name='LookbookListResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'next': serializers.URLField(allow_null=True),
+                    'previous': serializers.URLField(allow_null=True),
+                    'results': LookbookSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+        }
     )
     def get_queryset(self):
         queryset = Lookbook.objects.filter(is_public=True)
@@ -56,7 +70,17 @@ class FeaturedLookbooksView(generics.ListAPIView):
     @extend_schema(
         summary="Get featured lookbooks",
         description="Get list of featured lookbooks",
-        tags=["Lookbooks"]
+        tags=["Lookbooks"],
+        responses={
+            200: inline_serializer(
+                name='FeaturedLookbooksResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'results': LookbookSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+        }
     )
     def get_queryset(self):
         return Lookbook.objects.filter(is_public=True, is_featured=True)[:10]
@@ -72,7 +96,12 @@ class LookbookDetailView(generics.RetrieveAPIView):
     @extend_schema(
         summary="Get lookbook",
         description="Get detailed information about a lookbook",
-        tags=["Lookbooks"]
+        tags=["Lookbooks"],
+        responses={
+            200: LookbookSerializer,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         return Lookbook.objects.filter(is_public=True)
@@ -98,7 +127,20 @@ class LookbookCreateView(generics.CreateAPIView):
     @extend_schema(
         summary="Create lookbook",
         description="Create a new lookbook with curated outfits",
-        tags=["Lookbooks"]
+        tags=["Lookbooks"],
+        request=LookbookCreateSerializer,
+        responses={
+            201: inline_serializer(
+                name='LookbookCreateResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': LookbookSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
@@ -114,7 +156,22 @@ class LookbookUpdateView(generics.UpdateAPIView):
     @extend_schema(
         summary="Update lookbook",
         description="Update lookbook details",
-        tags=["Lookbooks"]
+        tags=["Lookbooks"],
+        request=LookbookSerializer,
+        responses={
+            200: inline_serializer(
+                name='LookbookUpdateResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': LookbookSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         return Lookbook.objects.filter(creator=self.request.user)
@@ -129,7 +186,13 @@ class LookbookDeleteView(generics.DestroyAPIView):
     @extend_schema(
         summary="Delete lookbook",
         description="Delete a lookbook",
-        tags=["Lookbooks"]
+        tags=["Lookbooks"],
+        responses={
+            204: OpenApiTypes.NONE,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         return Lookbook.objects.filter(creator=self.request.user)
@@ -144,7 +207,20 @@ class LikeLookbookView(views.APIView):
     @extend_schema(
         summary="Like/unlike lookbook",
         description="Toggle like on a lookbook",
-        tags=["Lookbooks"]
+        tags=["Lookbooks"],
+        responses={
+            200: inline_serializer(
+                name='LikeLookbookResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'is_liked': serializers.BooleanField(),
+                    'likes_count': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, lookbook_id):
         lookbook = get_object_or_404(Lookbook, id=lookbook_id)
@@ -187,7 +263,18 @@ class LookbookCommentsView(views.APIView):
     @extend_schema(
         summary="Get lookbook comments",
         description="Get comments on a lookbook",
-        tags=["Lookbooks"]
+        tags=["Lookbooks"],
+        responses={
+            200: inline_serializer(
+                name='LookbookCommentsResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'results': serializers.ListField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get(self, request, lookbook_id):
         # For now, return empty list

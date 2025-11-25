@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CuratorAI API - Welcome</title>
+    <title>CuratorAI API - Where Fashion Meets Intelligence</title>
     <style>
         * {
             margin: 0;
@@ -13,184 +13,341 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
+            background: #ffffff;
+            color: #1a1a1a;
+            line-height: 1.6;
             min-height: 100vh;
+        }
+        
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            text-decoration: none;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #1a1a1a;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 900px;
-            width: 100%;
-            padding: 40px;
-            animation: fadeIn 0.5s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        h1 {
-            color: #667eea;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        
-        .subtitle {
-            text-align: center;
-            color: #666;
-            font-size: 1.2em;
-            margin-bottom: 30px;
-        }
-        
-        .status {
-            display: inline-block;
-            background: #10b981;
             color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            margin-bottom: 30px;
+            font-weight: 700;
         }
         
-        .section {
-            margin-bottom: 30px;
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
         }
         
-        .section h2 {
-            color: #333;
-            font-size: 1.5em;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-        
-        .button-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        
-        .btn {
-            display: inline-block;
-            padding: 15px 25px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .btn-link {
+            color: #4b5563;
             text-decoration: none;
-            border-radius: 10px;
-            text-align: center;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            transition: color 0.2s;
+        }
+        
+        .btn-link:hover {
+            color: #1a1a1a;
+        }
+        
+        .btn-primary {
+            background: #ef4444;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
             font-weight: 600;
-            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s, transform 0.2s;
             border: none;
             cursor: pointer;
         }
         
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        .btn-primary:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
         }
         
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .btn-primary::after {
+            content: '→';
+            font-size: 1.2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+        
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: #ef4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+            line-height: 1.1;
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            color: #6b7280;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f0fdf4;
+            color: #16a34a;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+        
+        .status-badge::before {
+            content: '●';
+            font-size: 0.75rem;
+        }
+        
+        .section {
+            margin-bottom: 4rem;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid transparent;
         }
         
         .btn-secondary {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: white;
+            color: #1a1a1a;
+            border-color: #e5e7eb;
+        }
+        
+        .btn-secondary:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
         }
         
         .btn-success {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: #10b981;
+            color: white;
         }
         
-        .endpoints {
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .endpoints-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
         }
         
         .endpoint-card {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-            transition: transform 0.2s;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s;
         }
         
         .endpoint-card:hover {
-            transform: translateX(5px);
+            border-color: #d1d5db;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
         }
         
         .endpoint-card h3 {
-            color: #667eea;
-            font-size: 1.1em;
-            margin-bottom: 8px;
+            color: #1a1a1a;
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
         }
         
         .endpoint-card a {
-            color: #666;
+            color: #6b7280;
             text-decoration: none;
-            font-size: 0.9em;
+            font-size: 0.875rem;
             word-break: break-all;
+            display: block;
+            transition: color 0.2s;
         }
         
         .endpoint-card a:hover {
-            color: #667eea;
-            text-decoration: underline;
-        }
-        
-        .version {
-            text-align: center;
-            color: #999;
-            margin-top: 30px;
-            font-size: 0.9em;
+            color: #ef4444;
         }
         
         .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
         }
         
         .info-box p {
+            color: #1e40af;
             margin: 0;
-            color: #1976d2;
+            font-weight: 500;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 4rem;
+            color: #6b7280;
+        }
+        
+        .footer p {
+            margin: 0.5rem 0;
+        }
+        
+        .footer code {
+            background: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: #1a1a1a;
+        }
+        
+        .footer a {
+            color: #ef4444;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.125rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎨 CuratorAI API</h1>
-        <p class="subtitle">AI-powered Fashion Recommendation Platform</p>
-        <div style="text-align: center;">
-            <span class="status">● Operational</span>
-            <span style="color: #999; margin-left: 10px;">Version {{ api_version }}</span>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <div class="logo-icon">C</div>
+                <span>CuratorAI</span>
+            </a>
+            <div class="header-actions">
+                <a href="{{ swagger_url }}" class="btn-link" target="_blank">Documentation</a>
+                <a href="{{ admin_url }}" class="btn-link" target="_blank">Admin</a>
+                <a href="{{ swagger_url }}" class="btn-primary" target="_blank">Get Started</a>
+            </div>
         </div>
-        
-        <div class="info-box">
-            <p><strong>📚 Documentation:</strong> Explore the interactive API documentation using Swagger UI or ReDoc below.</p>
-        </div>
-        
-        <div class="section">
-            <h2>🚀 Quick Access</h2>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <div class="badge">⚡ AI-Powered Fashion Intelligence</div>
+            <h1>Where Fashion Meets Intelligence</h1>
+            <p>Discover your perfect style with AI-powered recommendations. Save time, money, and always look your best.</p>
+            <div class="status-badge">Operational</div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Quick Access</h2>
             <div class="button-group">
-                <a href="{{ swagger_url }}" class="btn btn-primary" target="_blank">
+                <a href="{{ swagger_url }}" class="btn btn-secondary" target="_blank">
                     📖 Swagger UI
                 </a>
                 <a href="{{ redoc_url }}" class="btn btn-secondary" target="_blank">
@@ -200,11 +357,17 @@
                     ⚙️ Admin Panel
                 </a>
             </div>
-        </div>
-        
-        <div class="section">
-            <h2>🔗 API Endpoints</h2>
-            <div class="endpoints">
+        </section>
+
+        <section class="section">
+            <div class="info-box">
+                <p><strong>📚 Documentation:</strong> Explore the interactive API documentation using Swagger UI or ReDoc above.</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">API Endpoints</h2>
+            <div class="endpoints-grid">
                 <div class="endpoint-card">
                     <h3>Authentication</h3>
                     <a href="{{ endpoints.authentication }}" target="_blank">{{ endpoints.authentication }}</a>
@@ -234,15 +397,15 @@
                     <a href="{{ endpoints.cart }}" target="_blank">{{ endpoints.cart }}</a>
                 </div>
             </div>
-        </div>
-        
-        <div class="version">
-            <p>CuratorAI API v{{ api_version }} | Status: Operational ✅</p>
-            <p style="margin-top: 10px; color: #999;">
-                For API requests, use: <code>Accept: application/json</code> header or visit <a href="{{ swagger_url }}" style="color: #667eea;">Swagger UI</a>
-            </p>
-        </div>
-    </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p><strong>CuratorAI API</strong> v{{ api_version }} | Status: Operational ✅</p>
+        <p>
+            For API requests, use: <code>Accept: application/json</code> header or visit 
+            <a href="{{ swagger_url }}">Swagger UI</a>
+        </p>
+    </footer>
 </body>
 </html>
-

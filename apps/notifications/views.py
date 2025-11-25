@@ -1,11 +1,12 @@
 """
 Views for notifications app.
 """
-from rest_framework import generics, status, views
+from rest_framework import generics, status, views, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer, OpenApiTypes
+from core.serializers import ValidationErrorResponse, UnauthorizedErrorResponse, NotFoundErrorResponse, ForbiddenErrorResponse
 from .models import Notification, NotificationPreference
 from .serializers import NotificationSerializer, NotificationPreferenceSerializer
 
@@ -24,7 +25,20 @@ class NotificationListView(generics.ListAPIView):
         parameters=[
             OpenApiParameter(name='type', description='Filter by notification type', required=False, type=str),
             OpenApiParameter(name='is_read', description='Filter by read status', required=False, type=bool),
-        ]
+            OpenApiParameter(name='page', description='Page number', required=False, type=int),
+        ],
+        responses={
+            200: inline_serializer(
+                name='NotificationListResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'next': serializers.URLField(allow_null=True),
+                    'previous': serializers.URLField(allow_null=True),
+                    'results': NotificationSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+        }
     )
     def get_queryset(self):
         queryset = Notification.objects.filter(user=self.request.user)
@@ -51,7 +65,18 @@ class UnreadCountView(views.APIView):
     @extend_schema(
         summary="Get unread count",
         description="Get count of unread notifications by type",
-        tags=["Notifications"]
+        tags=["Notifications"],
+        responses={
+            200: inline_serializer(
+                name='UnreadCountResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'by_type': serializers.DictField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+        }
     )
     def get(self, request, user_id):
         # Ensure user can only get their own unread count
@@ -86,7 +111,19 @@ class MarkNotificationReadView(views.APIView):
     @extend_schema(
         summary="Mark notification as read",
         description="Mark a single notification as read",
-        tags=["Notifications"]
+        tags=["Notifications"],
+        responses={
+            200: inline_serializer(
+                name='MarkReadResponse',
+                fields={
+                    'id': serializers.CharField(),
+                    'is_read': serializers.BooleanField(),
+                    'read_at': serializers.DateTimeField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def patch(self, request, notification_id):
         try:
@@ -117,7 +154,18 @@ class MarkAllReadView(views.APIView):
     @extend_schema(
         summary="Mark all as read",
         description="Mark all user notifications as read",
-        tags=["Notifications"]
+        tags=["Notifications"],
+        responses={
+            200: inline_serializer(
+                name='MarkAllReadResponse',
+                fields={
+                    'message': serializers.CharField(),
+                    'count': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+        }
     )
     def patch(self, request, user_id):
         # Ensure user can only mark their own notifications
@@ -147,7 +195,12 @@ class DeleteNotificationView(generics.DestroyAPIView):
     @extend_schema(
         summary="Delete notification",
         description="Delete a notification",
-        tags=["Notifications"]
+        tags=["Notifications"],
+        responses={
+            204: OpenApiTypes.NONE,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
@@ -163,7 +216,20 @@ class NotificationPreferencesView(generics.RetrieveUpdateAPIView):
     @extend_schema(
         summary="Get notification preferences",
         description="Get user's notification preferences",
-        tags=["Notifications"]
+        tags=["Notifications"],
+        responses={
+            200: inline_serializer(
+                name='NotificationPreferencesResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': NotificationPreferenceSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -171,7 +237,22 @@ class NotificationPreferencesView(generics.RetrieveUpdateAPIView):
     @extend_schema(
         summary="Update notification preferences",
         description="Update user's notification preferences",
-        tags=["Notifications"]
+        tags=["Notifications"],
+        request=NotificationPreferenceSerializer,
+        responses={
+            200: inline_serializer(
+                name='UpdateNotificationPreferencesResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': NotificationPreferenceSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)

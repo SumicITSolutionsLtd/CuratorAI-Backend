@@ -2,7 +2,7 @@
 OAuth authentication views for Google and Facebook.
 """
 import requests
-from rest_framework import status, views
+from rest_framework import status, views, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -10,9 +10,10 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils import timezone
 from allauth.socialaccount.models import SocialAccount
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
 from .serializers import UserSerializer
 from .models import UserProfile, StylePreference
+from core.serializers import ValidationErrorResponse, UnauthorizedErrorResponse
 
 User = get_user_model()
 
@@ -28,14 +29,36 @@ class GoogleOAuthView(views.APIView):
         summary="Google OAuth login",
         description="Authenticate with Google OAuth token. Returns JWT tokens.",
         tags=["Authentication"],
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'access_token': {'type': 'string', 'description': 'Google OAuth access token'},
-                },
-                'required': ['access_token']
+        request=inline_serializer(
+            name='GoogleOAuthRequest',
+            fields={
+                'access_token': serializers.CharField(required=True, help_text='Google OAuth access token'),
             }
+        ),
+        responses={
+            200: inline_serializer(
+                name='GoogleOAuthResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': inline_serializer(
+                        name='GoogleOAuthData',
+                        fields={
+                            'user': UserSerializer(),
+                            'tokens': inline_serializer(
+                                name='Tokens',
+                                fields={
+                                    'refresh': serializers.CharField(),
+                                    'access': serializers.CharField(),
+                                }
+                            ),
+                            'is_new_user': serializers.BooleanField(),
+                        }
+                    ),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
         }
     )
     def post(self, request):
@@ -182,14 +205,36 @@ class FacebookOAuthView(views.APIView):
         summary="Facebook OAuth login",
         description="Authenticate with Facebook OAuth token. Returns JWT tokens.",
         tags=["Authentication"],
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'access_token': {'type': 'string', 'description': 'Facebook OAuth access token'},
-                },
-                'required': ['access_token']
+        request=inline_serializer(
+            name='FacebookOAuthRequest',
+            fields={
+                'access_token': serializers.CharField(required=True, help_text='Facebook OAuth access token'),
             }
+        ),
+        responses={
+            200: inline_serializer(
+                name='FacebookOAuthResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': inline_serializer(
+                        name='FacebookOAuthData',
+                        fields={
+                            'user': UserSerializer(),
+                            'tokens': inline_serializer(
+                                name='Tokens',
+                                fields={
+                                    'refresh': serializers.CharField(),
+                                    'access': serializers.CharField(),
+                                }
+                            ),
+                            'is_new_user': serializers.BooleanField(),
+                        }
+                    ),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
         }
     )
     def post(self, request):

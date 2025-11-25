@@ -1,12 +1,13 @@
 """
 Views for social app - Posts, Feed, Comments.
 """
-from rest_framework import generics, status, views
+from rest_framework import generics, status, views, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer, OpenApiTypes
+from core.serializers import ValidationErrorResponse, UnauthorizedErrorResponse, NotFoundErrorResponse, ForbiddenErrorResponse
 from .models import Post, PostImage, PostLike, PostSave, Comment, CommentLike
 from .serializers import PostSerializer, PostCreateSerializer, CommentSerializer, PostImageSerializer
 
@@ -24,7 +25,20 @@ class SocialFeedView(generics.ListAPIView):
         tags=["Social Feed"],
         parameters=[
             OpenApiParameter(name='type', description='Feed type: following, discover, trending', required=False, type=str),
-        ]
+            OpenApiParameter(name='page', description='Page number', required=False, type=int),
+        ],
+        responses={
+            200: inline_serializer(
+                name='SocialFeedResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'next': serializers.URLField(allow_null=True),
+                    'previous': serializers.URLField(allow_null=True),
+                    'results': PostSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+        }
     )
     def get_queryset(self):
         feed_type = self.request.query_params.get('type', 'following')
@@ -64,7 +78,12 @@ class PostDetailView(generics.RetrieveAPIView):
     @extend_schema(
         summary="Get post",
         description="Get detailed information about a post",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        responses={
+            200: PostSerializer,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         return Post.objects.filter(is_deleted=False)
@@ -90,7 +109,32 @@ class PostCreateView(generics.CreateAPIView):
     @extend_schema(
         summary="Create post",
         description="Create a new social post",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'caption': {'type': 'string'},
+                    'tags': {'type': 'string'},
+                    'outfit_id': {'type': 'integer'},
+                    'location_name': {'type': 'string'},
+                    'privacy': {'type': 'string', 'enum': ['public', 'private', 'followers']},
+                    'images': {'type': 'array', 'items': {'type': 'string', 'format': 'binary'}},
+                }
+            }
+        },
+        responses={
+            201: inline_serializer(
+                name='PostCreateResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': PostSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def perform_create(self, serializer):
         post = serializer.save(user=self.request.user)
@@ -111,7 +155,22 @@ class PostUpdateView(generics.UpdateAPIView):
     @extend_schema(
         summary="Update post",
         description="Update post caption, tags, or privacy",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        request=PostCreateSerializer,
+        responses={
+            200: inline_serializer(
+                name='PostUpdateResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': PostSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         return Post.objects.filter(user=self.request.user, is_deleted=False)
@@ -126,7 +185,13 @@ class PostDeleteView(generics.DestroyAPIView):
     @extend_schema(
         summary="Delete post",
         description="Soft delete a post",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        responses={
+            204: OpenApiTypes.NONE,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         return Post.objects.filter(user=self.request.user, is_deleted=False)
@@ -145,7 +210,20 @@ class LikePostView(views.APIView):
     @extend_schema(
         summary="Like/unlike post",
         description="Toggle like on a post",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        responses={
+            200: inline_serializer(
+                name='LikePostResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'is_liked': serializers.BooleanField(),
+                    'likes_count': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, post_id):
         post = get_object_or_404(Post, id=post_id, is_deleted=False)
@@ -188,7 +266,20 @@ class SavePostView(views.APIView):
     @extend_schema(
         summary="Save/unsave post",
         description="Toggle save on a post",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        responses={
+            200: inline_serializer(
+                name='SavePostResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'is_saved': serializers.BooleanField(),
+                    'saves_count': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, post_id):
         post = get_object_or_404(Post, id=post_id, is_deleted=False)
@@ -231,7 +322,20 @@ class SharePostView(views.APIView):
     @extend_schema(
         summary="Share post",
         description="Share a post (increment share count)",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        responses={
+            200: inline_serializer(
+                name='SharePostResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'shares_count': serializers.IntegerField(),
+                    'share_url': serializers.URLField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, post_id):
         post = get_object_or_404(Post, id=post_id, is_deleted=False)
@@ -261,7 +365,21 @@ class PostCommentsView(generics.ListAPIView):
         tags=["Social Feed"],
         parameters=[
             OpenApiParameter(name='sort', description='Sort by: recent or popular', required=False, type=str),
-        ]
+            OpenApiParameter(name='page', description='Page number', required=False, type=int),
+        ],
+        responses={
+            200: inline_serializer(
+                name='PostCommentsResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'next': serializers.URLField(allow_null=True),
+                    'previous': serializers.URLField(allow_null=True),
+                    'results': CommentSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         post_id = self.kwargs.get('post_id')
@@ -283,7 +401,26 @@ class AddCommentView(views.APIView):
     @extend_schema(
         summary="Add comment",
         description="Add a comment to a post",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        request=inline_serializer(
+            name='AddCommentRequest',
+            fields={
+                'content': serializers.CharField(required=True, max_length=500),
+                'parent_comment_id': serializers.IntegerField(required=False, allow_null=True),
+            }
+        ),
+        responses={
+            201: inline_serializer(
+                name='AddCommentResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'data': CommentSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, post_id):
         post = get_object_or_404(Post, id=post_id, is_deleted=False)
@@ -326,7 +463,27 @@ class UpdateCommentView(generics.UpdateAPIView):
     @extend_schema(
         summary="Update comment",
         description="Update comment content",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        request=inline_serializer(
+            name='UpdateCommentRequest',
+            fields={
+                'content': serializers.CharField(required=True, max_length=500),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='UpdateCommentResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': CommentSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         return Comment.objects.filter(user=self.request.user, is_deleted=False)
@@ -341,7 +498,13 @@ class DeleteCommentView(generics.DestroyAPIView):
     @extend_schema(
         summary="Delete comment",
         description="Delete a comment (soft delete)",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        responses={
+            204: OpenApiTypes.NONE,
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         # User can delete their own comments
@@ -369,7 +532,20 @@ class LikeCommentView(views.APIView):
     @extend_schema(
         summary="Like/unlike comment",
         description="Toggle like on a comment",
-        tags=["Social Feed"]
+        tags=["Social Feed"],
+        responses={
+            200: inline_serializer(
+                name='LikeCommentResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'is_liked': serializers.BooleanField(),
+                    'likes_count': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, comment_id):
         comment = get_object_or_404(Comment, id=comment_id, is_deleted=False)

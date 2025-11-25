@@ -1,7 +1,7 @@
 """
 Views for accounts app - Authentication and User Management.
 """
-from rest_framework import generics, status, views
+from rest_framework import generics, status, views, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -10,7 +10,12 @@ from django.utils import timezone
 from django.db.models import Q
 from datetime import timedelta
 import random
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import (
+    extend_schema, 
+    OpenApiParameter, 
+    inline_serializer,
+    OpenApiTypes
+)
 from .models import User, UserProfile, StylePreference, UserFollowing, PasswordResetCode, EmailVerificationCode
 from .serializers import (
     UserSerializer,
@@ -18,6 +23,12 @@ from .serializers import (
     UserUpdateSerializer,
     UserFollowingSerializer,
     StylePreferenceCompletionSerializer
+)
+from core.serializers import (
+    ValidationErrorResponse,
+    UnauthorizedErrorResponse,
+    NotFoundErrorResponse,
+    ConflictErrorResponse,
 )
 from decimal import Decimal
 
@@ -33,7 +44,31 @@ class RegisterView(generics.CreateAPIView):
     @extend_schema(
         summary="Register new user",
         description="Create a new user account with email and password",
-        tags=["Authentication"]
+        tags=["Authentication"],
+        request=UserRegisterSerializer,
+        responses={
+            201: inline_serializer(
+                name='RegisterResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': inline_serializer(
+                        name='RegisterData',
+                        fields={
+                            'user': UserSerializer(),
+                            'tokens': inline_serializer(
+                                name='Tokens',
+                                fields={
+                                    'refresh': serializers.CharField(),
+                                    'access': serializers.CharField(),
+                                }
+                            ),
+                        }
+                    ),
+                }
+            ),
+            400: ValidationErrorResponse,
+        }
     )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -66,14 +101,36 @@ class LoginView(views.APIView):
         summary="Login user",
         description="Authenticate user and return JWT tokens",
         tags=["Authentication"],
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'email': {'type': 'string'},
-                    'password': {'type': 'string'}
-                }
+        request=inline_serializer(
+            name='LoginRequest',
+            fields={
+                'email': serializers.EmailField(required=True),
+                'password': serializers.CharField(required=True, write_only=True),
             }
+        ),
+        responses={
+            200: inline_serializer(
+                name='LoginResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': inline_serializer(
+                        name='LoginData',
+                        fields={
+                            'user': UserSerializer(),
+                            'tokens': inline_serializer(
+                                name='Tokens',
+                                fields={
+                                    'refresh': serializers.CharField(),
+                                    'access': serializers.CharField(),
+                                }
+                            ),
+                        }
+                    ),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
         }
     )
     def post(self, request):
@@ -120,7 +177,24 @@ class LogoutView(views.APIView):
     @extend_schema(
         summary="Logout user",
         description="Blacklist refresh token",
-        tags=["Authentication"]
+        tags=["Authentication"],
+        request=inline_serializer(
+            name='LogoutRequest',
+            fields={
+                'refresh_token': serializers.CharField(required=True),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='LogoutResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def post(self, request):
         try:
@@ -157,7 +231,18 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
     @extend_schema(
         summary="Get current user",
         description="Retrieve authenticated user's profile",
-        tags=["Users"]
+        tags=["Users"],
+        responses={
+            200: inline_serializer(
+                name='CurrentUserResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': UserSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -165,7 +250,20 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
     @extend_schema(
         summary="Update current user",
         description="Update authenticated user's profile",
-        tags=["Users"]
+        tags=["Users"],
+        request=UserUpdateSerializer,
+        responses={
+            200: inline_serializer(
+                name='UpdateUserResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': UserSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
@@ -182,7 +280,19 @@ class UserDetailView(generics.RetrieveAPIView):
     @extend_schema(
         summary="Get user by ID",
         description="Retrieve user profile by user ID",
-        tags=["Users"]
+        tags=["Users"],
+        responses={
+            200: inline_serializer(
+                name='UserDetailResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': UserSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -197,7 +307,20 @@ class FollowUserView(views.APIView):
     @extend_schema(
         summary="Follow user",
         description="Follow another user",
-        tags=["Users"]
+        tags=["Users"],
+        responses={
+            201: inline_serializer(
+                name='FollowUserResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+            409: ConflictErrorResponse,
+        }
     )
     def post(self, request, user_id):
         try:
@@ -232,7 +355,19 @@ class FollowUserView(views.APIView):
     @extend_schema(
         summary="Unfollow user",
         description="Unfollow a user",
-        tags=["Users"]
+        tags=["Users"],
+        responses={
+            200: inline_serializer(
+                name='UnfollowUserResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def delete(self, request, user_id):
         try:
@@ -272,7 +407,19 @@ class UserFollowersView(generics.ListAPIView):
     @extend_schema(
         summary="Get user followers",
         description="List all users following this user",
-        tags=["Users"]
+        tags=["Users"],
+        responses={
+            200: inline_serializer(
+                name='UserFollowersResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': UserSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -292,7 +439,19 @@ class UserFollowingView(generics.ListAPIView):
     @extend_schema(
         summary="Get user following",
         description="List all users that this user follows",
-        tags=["Users"]
+        tags=["Users"],
+        responses={
+            200: inline_serializer(
+                name='UserFollowingResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': UserSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -307,7 +466,24 @@ class RequestPasswordResetView(views.APIView):
     @extend_schema(
         summary="Request password reset",
         description="Send password reset code to user's email",
-        tags=["Authentication"]
+        tags=["Authentication"],
+        request=inline_serializer(
+            name='PasswordResetRequest',
+            fields={
+                'email': serializers.EmailField(required=True),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='PasswordResetRequestResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'code_expires_in': serializers.IntegerField(),
+                }
+            ),
+            400: ValidationErrorResponse,
+        }
     )
     def post(self, request):
         email = request.data.get('email')
@@ -359,7 +535,25 @@ class ConfirmPasswordResetView(views.APIView):
     @extend_schema(
         summary="Confirm password reset",
         description="Reset password using verification code",
-        tags=["Authentication"]
+        tags=["Authentication"],
+        request=inline_serializer(
+            name='ConfirmPasswordResetRequest',
+            fields={
+                'email': serializers.EmailField(required=True),
+                'code': serializers.CharField(required=True, max_length=6),
+                'new_password': serializers.CharField(required=True, write_only=True),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='ConfirmPasswordResetResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                }
+            ),
+            400: ValidationErrorResponse,
+        }
     )
     def post(self, request):
         email = request.data.get('email')
@@ -418,7 +612,19 @@ class RequestEmailVerificationView(views.APIView):
     @extend_schema(
         summary="Request email verification",
         description="Send verification code to user's email",
-        tags=["Authentication"]
+        tags=["Authentication"],
+        responses={
+            200: inline_serializer(
+                name='EmailVerificationRequestResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'code_expires_in': serializers.IntegerField(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def post(self, request):
         user = request.user
@@ -458,7 +664,30 @@ class ConfirmEmailVerificationView(views.APIView):
     @extend_schema(
         summary="Confirm email verification",
         description="Verify email using verification code",
-        tags=["Authentication"]
+        tags=["Authentication"],
+        request=inline_serializer(
+            name='ConfirmEmailVerificationRequest',
+            fields={
+                'code': serializers.CharField(required=True, max_length=6),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='ConfirmEmailVerificationResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'user': inline_serializer(
+                        name='UserVerificationStatus',
+                        fields={
+                            'is_verified': serializers.BooleanField(),
+                        }
+                    ),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def post(self, request):
         code = request.data.get('code')
@@ -515,7 +744,19 @@ class SearchUsersView(generics.ListAPIView):
         tags=["Users"],
         parameters=[
             OpenApiParameter(name='q', description='Search query', required=True, type=str),
-        ]
+        ],
+        responses={
+            200: inline_serializer(
+                name='SearchUsersResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': UserSerializer(many=True),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def get_queryset(self):
         query = self.request.query_params.get('q', '')
@@ -539,7 +780,19 @@ class DeleteAccountView(views.APIView):
     @extend_schema(
         summary="Delete account",
         description="Soft delete user account",
-        tags=["Users"]
+        tags=["Users"],
+        request=inline_serializer(
+            name='DeleteAccountRequest',
+            fields={
+                'password': serializers.CharField(required=True, write_only=True),
+                'confirmation': serializers.CharField(required=True),
+            }
+        ),
+        responses={
+            204: OpenApiTypes.NONE,
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def delete(self, request):
         password = request.data.get('password')
@@ -587,7 +840,23 @@ class CompleteRegistrationView(views.APIView):
         description="Complete user registration by setting up style preferences (shop for, styles, dress for, budget)",
         tags=["Authentication"],
         request=StylePreferenceCompletionSerializer,
-        responses={200: UserSerializer}
+        responses={
+            200: inline_serializer(
+                name='CompleteRegistrationResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': inline_serializer(
+                        name='CompleteRegistrationData',
+                        fields={
+                            'user': UserSerializer(),
+                        }
+                    ),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def post(self, request):
         serializer = StylePreferenceCompletionSerializer(data=request.data)

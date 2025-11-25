@@ -1,14 +1,15 @@
 """
 Views for wardrobe app.
 """
-from rest_framework import generics, status, views
+from rest_framework import generics, status, views, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q, Count, Avg
 from django.db import models
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer, OpenApiTypes
+from core.serializers import ValidationErrorResponse, UnauthorizedErrorResponse, NotFoundErrorResponse, ForbiddenErrorResponse
 from .models import Wardrobe, WardrobeItem, WardrobeItemImage, WardrobeItemWearLog
 from .serializers import (
     WardrobeSerializer,
@@ -29,7 +30,19 @@ class UserWardrobeView(generics.RetrieveAPIView):
     @extend_schema(
         summary="Get user wardrobe",
         description="Retrieve user's wardrobe with item counts",
-        tags=["Wardrobe"]
+        tags=["Wardrobe"],
+        responses={
+            200: inline_serializer(
+                name='WardrobeResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': WardrobeSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_object(self):
         user_id = self.kwargs.get('user_id')
@@ -54,7 +67,20 @@ class WardrobeItemListView(generics.ListAPIView):
             OpenApiParameter(name='season', description='Filter by season', required=False, type=str),
             OpenApiParameter(name='brand', description='Filter by brand', required=False, type=str),
             OpenApiParameter(name='tags', description='Filter by tags (comma-separated)', required=False, type=str),
-        ]
+            OpenApiParameter(name='page', description='Page number', required=False, type=int),
+        ],
+        responses={
+            200: inline_serializer(
+                name='WardrobeItemListResponse',
+                fields={
+                    'count': serializers.IntegerField(),
+                    'next': serializers.URLField(allow_null=True),
+                    'previous': serializers.URLField(allow_null=True),
+                    'results': WardrobeItemSerializer(many=True),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+        }
     )
     def get_queryset(self):
         wardrobe, _ = Wardrobe.objects.get_or_create(user=self.request.user)
@@ -96,7 +122,19 @@ class WardrobeItemDetailView(generics.RetrieveAPIView):
     @extend_schema(
         summary="Get wardrobe item",
         description="Retrieve detailed information about a wardrobe item",
-        tags=["Wardrobe"]
+        tags=["Wardrobe"],
+        responses={
+            200: inline_serializer(
+                name='WardrobeItemDetailResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': WardrobeItemSerializer(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         wardrobe, _ = Wardrobe.objects.get_or_create(user=self.request.user)
@@ -113,7 +151,20 @@ class WardrobeItemCreateView(generics.CreateAPIView):
     @extend_schema(
         summary="Add wardrobe item",
         description="Add a new item to user's wardrobe",
-        tags=["Wardrobe"]
+        tags=["Wardrobe"],
+        request=WardrobeItemCreateSerializer,
+        responses={
+            201: inline_serializer(
+                name='WardrobeItemCreateResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': WardrobeItemSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+        }
     )
     def perform_create(self, serializer):
         wardrobe, _ = Wardrobe.objects.get_or_create(user=self.request.user)
@@ -130,7 +181,21 @@ class WardrobeItemUpdateView(generics.UpdateAPIView):
     @extend_schema(
         summary="Update wardrobe item",
         description="Update a wardrobe item's information",
-        tags=["Wardrobe"]
+        tags=["Wardrobe"],
+        request=WardrobeItemSerializer,
+        responses={
+            200: inline_serializer(
+                name='WardrobeItemUpdateResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'data': WardrobeItemSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         wardrobe, _ = Wardrobe.objects.get_or_create(user=self.request.user)
@@ -146,7 +211,12 @@ class WardrobeItemDeleteView(generics.DestroyAPIView):
     @extend_schema(
         summary="Delete wardrobe item",
         description="Soft delete a wardrobe item",
-        tags=["Wardrobe"]
+        tags=["Wardrobe"],
+        responses={
+            204: OpenApiTypes.NONE,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get_queryset(self):
         wardrobe, _ = Wardrobe.objects.get_or_create(user=self.request.user)
@@ -167,7 +237,29 @@ class WardrobeItemImageUploadView(views.APIView):
     @extend_schema(
         summary="Upload item image",
         description="Upload an image for a wardrobe item",
-        tags=["Wardrobe"]
+        tags=["Wardrobe"],
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'image': {'type': 'string', 'format': 'binary'},
+                    'is_primary': {'type': 'boolean', 'default': False},
+                },
+                'required': ['image']
+            }
+        },
+        responses={
+            201: inline_serializer(
+                name='WardrobeItemImageResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'data': WardrobeItemImageSerializer(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, item_id):
         wardrobe, _ = Wardrobe.objects.get_or_create(user=request.user)
@@ -211,7 +303,28 @@ class MarkItemAsWornView(views.APIView):
     @extend_schema(
         summary="Mark item as worn",
         description="Log that an item was worn on a specific date",
-        tags=["Wardrobe"]
+        tags=["Wardrobe"],
+        request=inline_serializer(
+            name='MarkWornRequest',
+            fields={
+                'date': serializers.DateField(required=False),
+                'outfit_id': serializers.IntegerField(required=False, allow_null=True),
+            }
+        ),
+        responses={
+            200: inline_serializer(
+                name='MarkWornResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'times_worn': serializers.IntegerField(),
+                    'last_worn': serializers.DateField(),
+                }
+            ),
+            400: ValidationErrorResponse,
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def post(self, request, item_id):
         wardrobe, _ = Wardrobe.objects.get_or_create(user=request.user)
@@ -249,7 +362,27 @@ class WardrobeStatisticsView(views.APIView):
     @extend_schema(
         summary="Get wardrobe statistics",
         description="Get detailed statistics about user's wardrobe",
-        tags=["Wardrobe"]
+        tags=["Wardrobe"],
+        responses={
+            200: inline_serializer(
+                name='WardrobeStatisticsResponse',
+                fields={
+                    'total_items': serializers.IntegerField(),
+                    'total_value': serializers.FloatField(),
+                    'currency': serializers.CharField(),
+                    'categories': serializers.DictField(),
+                    'colors': serializers.DictField(),
+                    'brands': serializers.DictField(),
+                    'most_worn_items': serializers.ListField(),
+                    'least_worn_items': serializers.ListField(),
+                    'average_wear_per_item': serializers.FloatField(),
+                    'items_never_worn': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            403: ForbiddenErrorResponse,
+            404: NotFoundErrorResponse,
+        }
     )
     def get(self, request, user_id):
         wardrobe, _ = Wardrobe.objects.get_or_create(user_id=user_id)
