@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'apps.cart',
     'apps.social',
     'apps.lookbooks',
+    'apps.search',
     'apps.test_dashboard',
 ]
 

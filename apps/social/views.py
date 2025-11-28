@@ -145,25 +145,26 @@ class PostCreateView(generics.CreateAPIView):
         }
     )
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        instance = serializer.instance
+        
+        # Create post - user is passed as kwarg to serializer.create()
+        # The serializer will handle images_data and image_urls
+        post = serializer.save(user=request.user)
+        
+        # Handle legacy multipart/form-data image uploads (if images_data/image_urls not provided)
+        # This supports the old 'images' field name for backward compatibility
+        if not post.images.exists():
+            images = request.FILES.getlist('images')
+            for idx, image in enumerate(images[:10]):  # Max 10 images
+                PostImage.objects.create(post=post, image=image, order=idx)
         
         # Return wrapped response
         return Response({
             'success': True,
             'message': 'Post created successfully',
-            'data': PostSerializer(instance, context={'request': request}).data
+            'data': PostSerializer(post, context={'request': request}).data
         }, status=status.HTTP_201_CREATED)
-    
-    def perform_create(self, serializer):
-        post = serializer.save(user=self.request.user)
-        
-        # Handle image uploads
-        images = self.request.FILES.getlist('images')
-        for idx, image in enumerate(images[:10]):  # Max 10 images
-            PostImage.objects.create(post=post, image=image, order=idx)
 
 
 class PostUpdateView(generics.UpdateAPIView):

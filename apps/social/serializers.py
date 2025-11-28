@@ -31,10 +31,24 @@ class PostImageSerializer(serializers.ModelSerializer):
 
 class UserBasicSerializer(serializers.ModelSerializer):
     """Basic user serializer for nested use."""
+    avatar = serializers.SerializerMethodField()
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'avatar', 'is_verified']
+        fields = ['id', 'username', 'first_name', 'last_name', 'avatar', 'avatar_url', 'is_verified']
+    
+    def get_avatar(self, obj):
+        """Return avatar URL from avatar_url field or ImageField as fallback."""
+        # Prioritize avatar_url field (external URL) over ImageField - ALWAYS
+        if obj.avatar_url:
+            return obj.avatar_url
+        # Fallback to ImageField if avatar_url is not set
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -103,10 +117,22 @@ class PostSerializer(serializers.ModelSerializer):
 
 class PostCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating posts."""
+    images_data = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+        help_text="List of image files to upload"
+    )
+    image_urls = serializers.ListField(
+        child=serializers.URLField(),
+        write_only=True,
+        required=False,
+        help_text="List of external image URLs"
+    )
     
     class Meta:
         model = Post
-        fields = ['caption', 'tags', 'outfit_id', 'tagged_items', 'location_name', 'location_lat', 'location_lng', 'privacy']
+        fields = ['caption', 'tags', 'outfit_id', 'tagged_items', 'location_name', 'location_lat', 'location_lng', 'privacy', 'images_data', 'image_urls']
         extra_kwargs = {
             'caption': {'required': True},
             'tags': {'required': False},
@@ -127,4 +153,33 @@ class PostCreateSerializer(serializers.ModelSerializer):
         if 'privacy' not in data or not data.get('privacy'):
             data['privacy'] = 'public'
         return data
+    
+    def create(self, validated_data, **kwargs):
+        """Create post and handle images."""
+        # Extract image data
+        images_data = validated_data.pop('images_data', [])
+        image_urls = validated_data.pop('image_urls', [])
+        
+        # Get user from kwargs (passed by view via serializer.save(user=request.user))
+        # If not in kwargs, try context as fallback
+        user = kwargs.pop('user', None)
+        if not user:
+            request = self.context.get('request')
+            if request:
+                user = request.user
+        
+        if not user:
+            raise serializers.ValidationError("User is required to create a post")
+        
+        post = Post.objects.create(user=user, **validated_data)
+        
+        # Handle file uploads (from images_data field)
+        for idx, image_file in enumerate(images_data):
+            PostImage.objects.create(post=post, image=image_file, order=idx)
+        
+        # Handle URL-based images (from image_urls field)
+        for idx, image_url in enumerate(image_urls):
+            PostImage.objects.create(post=post, image_url=image_url, order=idx + len(images_data))
+        
+        return post
 

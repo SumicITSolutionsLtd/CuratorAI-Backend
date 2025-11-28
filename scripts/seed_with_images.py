@@ -111,31 +111,34 @@ def get_random_image_url(category='fashion'):
 
 
 def update_user_avatars():
-    """Update all users with avatar images."""
+    """Update all users with avatar images - prioritize image_url over ImageField."""
     print("\n👤 Updating user avatars...")
     users = User.objects.all()
     updated = 0
     for user in users:
+        # Always update image_url if it's empty (even if ImageField exists)
+        # This ensures image_url takes priority in serializers
         if not user.avatar_url:
             img_url = get_random_image_url('user')
             user.avatar_url = img_url
             user.save(update_fields=['avatar_url'])
             updated += 1
-    print(f"✅ Updated {updated} user avatars")
+    print(f"✅ Updated {updated} user avatars with image URLs")
 
 
 def update_outfit_images():
-    """Update all outfits with main images."""
+    """Update all outfits with main images - prioritize image_url over ImageField."""
     print("\n👗 Updating outfit images...")
     outfits = Outfit.objects.all()
     updated = 0
     for outfit in outfits:
+        # Always update main_image_url if it's empty (even if ImageField exists)
         if not outfit.main_image_url:
             img_url = get_random_image_url('fashion')
             outfit.main_image_url = img_url
             outfit.save(update_fields=['main_image_url'])
             updated += 1
-    print(f"✅ Updated {updated} outfit images")
+    print(f"✅ Updated {updated} outfit images with URLs")
 
 
 def update_wardrobe_item_images():
@@ -164,27 +167,32 @@ def update_wardrobe_item_images():
 
 
 def update_lookbook_images():
-    """Update all lookbooks with cover images."""
+    """Update all lookbooks with cover images - prioritize image_url over ImageField."""
     print("\n📚 Updating lookbook images...")
     lookbooks = Lookbook.objects.all()
     updated = 0
     for lookbook in lookbooks:
+        # Always update cover_image_url if it's empty (even if ImageField exists)
         if not lookbook.cover_image_url:
             img_url = get_random_image_url('fashion')
             lookbook.cover_image_url = img_url
             lookbook.save(update_fields=['cover_image_url'])
             updated += 1
-    print(f"✅ Updated {updated} lookbook images")
+    print(f"✅ Updated {updated} lookbook images with URLs")
 
 
 def update_post_images():
     """Update all social posts with images."""
     print("\n📸 Updating post images...")
     posts = Post.objects.all()
-    updated = 0
+    updated_posts = 0
+    updated_images = 0
+    
     for post in posts:
-        # Check if post already has images
-        if not post.images.exists():
+        # Check if post has images
+        post_images = post.images.all()
+        
+        if not post_images.exists():
             # Add 1-3 images per post
             num_images = random.randint(1, 3)
             for i in range(num_images):
@@ -194,8 +202,18 @@ def update_post_images():
                     image_url=img_url,
                     order=i
                 )
-            updated += 1
-    print(f"✅ Updated {updated} posts with images")
+            updated_posts += 1
+        else:
+            # Update existing images that don't have image_url
+            for post_image in post_images:
+                if not post_image.image_url:
+                    img_url = get_random_image_url('fashion')
+                    post_image.image_url = img_url
+                    post_image.save(update_fields=['image_url'])
+                    updated_images += 1
+    
+    print(f"✅ Updated {updated_posts} posts with new images")
+    print(f"✅ Updated {updated_images} existing post images with URLs")
 
 
 def check_and_seed_data():

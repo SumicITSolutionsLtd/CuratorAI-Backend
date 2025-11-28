@@ -1067,8 +1067,13 @@
                 },
                 '/api/v1/social/posts/': {
                     'POST': JSON.stringify({
-                        "caption": "Check out my new outfit!",
-                        "tags": ["fashion", "outfit"],
+                        "caption": "Check out my new outfit! Loving this casual weekend look 🎨 #fashion #outfit #style",
+                        "tags": ["fashion", "outfit", "casual", "weekend"],
+                        "outfit_id": null,
+                        "tagged_items": [],
+                        "location_name": "New York, NY",
+                        "location_lat": 40.7128,
+                        "location_lng": -74.0060,
                         "privacy": "public"
                     }, null, 2)
                 },
@@ -1077,11 +1082,15 @@
                 },
                 '/api/v1/lookbooks/create/': {
                     'POST': JSON.stringify({
-                        "title": "Summer Collection",
-                        "description": "My favorite summer looks",
+                        "title": "Summer Collection 2024",
+                        "description": "My favorite summer looks for beach days, brunches, and evening events",
+                        "cover_image_url": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800",
                         "season": "summer",
                         "occasion": "casual",
-                        "is_public": true
+                        "style": ["boho", "casual", "beach"],
+                        "tags": ["summer", "beach", "vacation", "style"],
+                        "is_public": true,
+                        "outfit_ids": [1, 2, 3]
                     }, null, 2)
                 },
                 '/api/v1/lookbooks/': {
@@ -1090,9 +1099,42 @@
                 '/api/v1/outfits/': {
                     'GET': '',
                     'POST': JSON.stringify({
-                        "name": "Casual Outfit",
-                        "description": "A casual everyday outfit",
-                        "is_public": true
+                        "title": "Casual Weekend Outfit",
+                        "description": "A comfortable and stylish casual outfit perfect for weekend outings",
+                        "main_image_url": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800",
+                        "occasion": "casual",
+                        "season": "all",
+                        "style_tags": ["casual", "comfortable", "minimalist"],
+                        "color_palette": ["blue", "white", "denim"],
+                        "is_public": true,
+                        "items": [
+                            {
+                                "item_type": "top",
+                                "name": "White Cotton T-Shirt",
+                                "brand": "Everlane",
+                                "image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400",
+                                "price": "28.00",
+                                "currency": "USD",
+                                "size": "M",
+                                "color": "white",
+                                "material": "Cotton",
+                                "purchase_url": "https://example.com/product/1",
+                                "is_available": true
+                            },
+                            {
+                                "item_type": "bottom",
+                                "name": "Blue Denim Jeans",
+                                "brand": "Levi's",
+                                "image_url": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400",
+                                "price": "89.50",
+                                "currency": "USD",
+                                "size": "32",
+                                "color": "blue",
+                                "material": "Denim",
+                                "purchase_url": "https://example.com/product/2",
+                                "is_available": true
+                            }
+                        ]
                     }, null, 2)
                 }
             };
@@ -1240,11 +1282,16 @@
                     return;
                 }
                 
-                // Social endpoints
+                // Social endpoints - Comprehensive example
                 if (lowerPath.includes('/social/posts') && !lowerPath.includes('/posts/')) {
                     bodyField.value = JSON.stringify({
-                        "caption": "Check out my new outfit!",
-                        "tags": ["fashion", "outfit"],
+                        "caption": "Check out my new outfit! Loving this casual weekend look 🎨 #fashion #outfit #style",
+                        "tags": ["fashion", "outfit", "casual", "weekend"],
+                        "outfit_id": null,
+                        "tagged_items": [],
+                        "location_name": "New York, NY",
+                        "location_lat": 40.7128,
+                        "location_lng": -74.0060,
                         "privacy": "public"
                     }, null, 2);
                     return;
@@ -1257,39 +1304,98 @@
                     return;
                 }
                 
-                // Lookbooks
+                // Lookbooks - Comprehensive example
                 if (lowerPath.includes('/lookbooks/create') || (lowerPath.includes('/lookbook') && lowerPath.includes('/create'))) {
                     bodyField.value = JSON.stringify({
-                        "title": "Summer Collection",
-                        "description": "My favorite summer looks",
+                        "title": "Summer Collection 2024",
+                        "description": "My favorite summer looks for beach days, brunches, and evening events",
+                        "cover_image_url": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800",
                         "season": "summer",
                         "occasion": "casual",
-                        "is_public": true
+                        "style": ["boho", "casual", "beach"],
+                        "tags": ["summer", "beach", "vacation", "style"],
+                        "is_public": true,
+                        "outfit_ids": [1, 2, 3]
                     }, null, 2);
                     return;
                 }
                 
-                // Outfits
+                // Outfits - Comprehensive example with ALL fields
                 if (lowerPath.includes('/outfits') && !lowerPath.includes('/outfits/')) {
                     bodyField.value = JSON.stringify({
-                        "name": "Casual Outfit",
-                        "description": "A casual everyday outfit",
+                        "title": "Casual Weekend Outfit",
+                        "description": "A comfortable and stylish casual outfit perfect for weekend outings",
+                        "main_image_url": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800",
+                        "occasion": "casual",
+                        "season": "all",
+                        "style_tags": ["casual", "comfortable", "minimalist"],
+                        "color_palette": ["blue", "white", "denim"],
                         "is_public": true,
-                        "items": []
+                        "items": [
+                            {
+                                "item_type": "top",
+                                "name": "White Cotton T-Shirt",
+                                "brand": "Everlane",
+                                "image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400",
+                                "price": "28.00",
+                                "currency": "USD",
+                                "size": "M",
+                                "color": "white",
+                                "material": "Cotton",
+                                "purchase_url": "https://example.com/product/1",
+                                "is_available": true
+                            },
+                            {
+                                "item_type": "bottom",
+                                "name": "Blue Denim Jeans",
+                                "brand": "Levi's",
+                                "image_url": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400",
+                                "price": "89.50",
+                                "currency": "USD",
+                                "size": "32",
+                                "color": "blue",
+                                "material": "Denim",
+                                "purchase_url": "https://example.com/product/2",
+                                "is_available": true
+                            },
+                            {
+                                "item_type": "shoes",
+                                "name": "White Sneakers",
+                                "brand": "Veja",
+                                "image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+                                "price": "150.00",
+                                "currency": "USD",
+                                "size": "9",
+                                "color": "white",
+                                "purchase_url": "https://example.com/product/3",
+                                "is_available": true
+                            }
+                        ]
                     }, null, 2);
                     return;
                 }
                 
-                // Wardrobe
+                // Wardrobe - Comprehensive example
                 if (lowerPath.includes('/wardrobe/items/create') || (lowerPath.includes('/wardrobe') && lowerPath.includes('/create'))) {
                     bodyField.value = JSON.stringify({
-                        "name": "Blue Jeans",
-                        "category": "pants",
+                        "category": "bottom",
+                        "name": "Blue Denim Jeans",
                         "brand": "Levi's",
                         "color": "blue",
-                        "size": "M",
+                        "size": "32",
+                        "price": "89.50",
+                        "currency": "USD",
+                        "primary_image_url": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400",
+                        "season": "all",
+                        "tags": ["denim", "casual", "classic"],
+                        "notes": "Favorite pair, great fit",
+                        "purchase_link": "https://example.com/product/123",
                         "purchase_date": "2024-01-15",
-                        "price": 79.99
+                        "attributes": [
+                            {"key": "Material", "value": "98% Cotton, 2% Elastane"},
+                            {"key": "Fit", "value": "Slim"},
+                            {"key": "Wash", "value": "Medium"}
+                        ]
                     }, null, 2);
                     return;
                 }
@@ -1327,15 +1433,29 @@
                     bodyField.value = JSON.stringify({
                         "first_name": "Updated",
                         "last_name": "Name",
-                        "bio": "Updated bio",
-                        "avatar": null
+                        "bio": "Updated bio with more information about me",
+                        "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
+                        "profile": {
+                            "height": "5'8\"",
+                            "body_type": "athletic",
+                            "favorite_brands": ["Nike", "Adidas"]
+                        },
+                        "style_preference": {
+                            "favorite_colors": ["blue", "black", "white"],
+                            "style_type": "casual"
+                        }
                     }, null, 2);
                     return;
                 }
                 if (lowerPath.includes('/lookbooks/') && lowerPath.includes('/update')) {
                     bodyField.value = JSON.stringify({
-                        "title": "Updated Title",
-                        "description": "Updated description",
+                        "title": "Updated Lookbook Title",
+                        "description": "Updated description with more details",
+                        "cover_image_url": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800",
+                        "season": "winter",
+                        "occasion": "formal",
+                        "style": ["elegant", "formal"],
+                        "tags": ["updated", "tags"],
                         "is_public": false
                     }, null, 2);
                     return;
@@ -1349,15 +1469,28 @@
                 }
                 if (lowerPath.includes('/outfits/') && !lowerPath.includes('/like') && !lowerPath.includes('/save')) {
                     bodyField.value = JSON.stringify({
-                        "name": "Updated Outfit",
-                        "description": "Updated description"
+                        "title": "Updated Outfit Title",
+                        "description": "Updated description with more details",
+                        "main_image_url": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800",
+                        "occasion": "work",
+                        "season": "fall",
+                        "style_tags": ["professional", "modern"],
+                        "color_palette": ["navy", "gray"],
+                        "is_public": false
                     }, null, 2);
                     return;
                 }
                 if (lowerPath.includes('/wardrobe/items/') && lowerPath.includes('/update')) {
                     bodyField.value = JSON.stringify({
-                        "name": "Updated Item",
-                        "category": "tops"
+                        "name": "Updated Item Name",
+                        "brand": "Updated Brand",
+                        "color": "black",
+                        "size": "L",
+                        "price": "99.99",
+                        "primary_image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400",
+                        "season": "winter",
+                        "tags": ["updated", "tag"],
+                        "notes": "Updated notes"
                     }, null, 2);
                     return;
                 }

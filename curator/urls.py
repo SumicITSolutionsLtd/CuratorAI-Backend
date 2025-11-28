@@ -12,6 +12,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from apps.search.views import VisualSearchUploadView
 
 # Admin customization
 admin.site.site_header = "CuratorAI Admin"
@@ -81,6 +82,10 @@ urlpatterns = [
     path('api/v1/cart/', include('apps.cart.urls')),
     path('api/v1/social/', include('apps.social.urls')),
     path('api/v1/lookbooks/', include('apps.lookbooks.urls')),
+    path('api/v1/search/', include('apps.search.urls')),
+    
+    # ML Search endpoints (legacy/alternative paths)
+    path('ml/search/upload', VisualSearchUploadView.as_view(), name='ml-search-upload'),
     
     # Test Dashboard
     path('test-dashboard/', include('apps.test_dashboard.urls')),
