@@ -309,7 +309,9 @@ class EndpointTester:
             # 3. We're using a specific test host, not '*'
             # 4. This only runs in the test dashboard, not in production API calls
             test_hosts = list(settings.ALLOWED_HOSTS) + ['testserver', 'localhost', '127.0.0.1']
-            with override_settings(ALLOWED_HOSTS=test_hosts, SERVER_NAME='testserver'):
+            # Temporarily enable DEBUG to get detailed error messages
+            original_debug = settings.DEBUG
+            with override_settings(ALLOWED_HOSTS=test_hosts, SERVER_NAME='testserver', DEBUG=True):
                 # Make the request using APIClient (test client)
                 method_func = getattr(self.client, method.lower())
                 
@@ -411,6 +413,48 @@ class EndpointTester:
                     else:
                         parsed_content = {'raw_content': content[:500]}
             
+            # Check if there's exception info in the response (Django test client stores it)
+            exception_info = None
+            exception_traceback = None
+            if hasattr(response, 'exc_info') and response.exc_info:
+                import traceback as tb
+                exception_info = response.exc_info
+                exception_traceback = ''.join(tb.format_exception(*exception_info))
+                self._log('error', f'Exception occurred: {exception_info[0].__name__}: {str(exception_info[1])}')
+                self._log('error', f'Traceback:\n{exception_traceback}')
+            
+            # For 500 errors, try to extract more details from the response
+            if response.status_code == 500:
+                # If DEBUG was enabled, the error response should have more details
+                if isinstance(response_data, dict) and 'error' in response_data:
+                    error_info = response_data.get('error', {})
+                    if isinstance(error_info, dict):
+                        # Check for details field which might contain exception info
+                        if 'details' in error_info:
+                            details = error_info['details']
+                            if isinstance(details, dict):
+                                # Extract traceback if available
+                                if 'traceback' in details:
+                                    exception_traceback = details.get('traceback', exception_traceback)
+                                # Log exception type if available
+                                if 'exception_type' in details:
+                                    self._log('error', f'Exception type: {details.get("exception_type")}')
+                                if 'exception_message' in details:
+                                    self._log('error', f'Exception message: {details.get("exception_message")}')
+                        # Also check if message contains useful info
+                        if 'message' in error_info and error_info['message'] != 'An internal server error occurred':
+                            self._log('error', f'Error message: {error_info["message"]}')
+                
+                # If we have exception info, add it to response_data
+                if exception_info:
+                    if not isinstance(response_data, dict):
+                        response_data = {}
+                    response_data['_exception'] = {
+                        'type': exception_info[0].__name__,
+                        'message': str(exception_info[1]),
+                        'traceback': exception_traceback
+                    }
+            
             self.response_log = {
                 'status_code': response.status_code,
                 'status_text': self._get_status_text(response.status_code),
@@ -418,6 +462,7 @@ class EndpointTester:
                 'data': response_data,
                 'content': content,
                 'parsed_content': parsed_content if isinstance(parsed_content, dict) else None,
+                'exception_traceback': exception_traceback if exception_traceback else None,
             }
             
             self._log('info', f'Received response: {response.status_code} {self._get_status_text(response.status_code)}')
@@ -443,6 +488,10 @@ class EndpointTester:
         finally:
             sys.stdout = old_stdout
             sys.stderr = old_stderr
+            # Restore original DEBUG setting (though override_settings should handle this)
+            # This is just a safety measure
+            if 'original_debug' in locals():
+                settings.DEBUG = original_debug
         
         # Capture logs
         stdout_content = stdout_capture.getvalue()

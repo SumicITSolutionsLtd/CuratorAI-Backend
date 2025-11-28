@@ -1544,6 +1544,21 @@
                 }
             }
             
+            // Add exception traceback if available
+            if (response.exception_traceback) {
+                responseText += `\n\nException Traceback:\n${response.exception_traceback}`;
+            }
+            
+            // Check for exception info in response data
+            if (responseBody && typeof responseBody === 'object' && responseBody._exception) {
+                responseText += `\n\nException Details:\n`;
+                responseText += `Type: ${responseBody._exception.type || 'Unknown'}\n`;
+                responseText += `Message: ${responseBody._exception.message || 'No message'}\n`;
+                if (responseBody._exception.traceback) {
+                    responseText += `\nTraceback:\n${responseBody._exception.traceback}`;
+                }
+            }
+            
             // Add helpful notes for common status codes
             if (response.status_code === 400 && responseBody && typeof responseBody === 'object') {
                 if (responseBody.details || responseBody.error) {
@@ -1558,14 +1573,31 @@
             let logsHtml = '';
             if (result.logs && result.logs.length > 0) {
                 result.logs.forEach(log => {
-                    logsHtml += `<div class="log-entry log-${log.level}">[${log.timestamp}] ${log.level.toUpperCase()}: ${log.message}</div>`;
+                    // Format traceback messages with better styling
+                    const message = log.message.replace(/\n/g, '<br>');
+                    logsHtml += `<div class="log-entry log-${log.level}">[${log.timestamp}] ${log.level.toUpperCase()}: ${message}</div>`;
                 });
             }
             if (result.stdout) {
-                logsHtml += `<div class="log-entry log-info"><strong>Standard Output:</strong><br><pre style="margin-top: 5px;">${result.stdout}</pre></div>`;
+                logsHtml += `<div class="log-entry log-info"><strong>Standard Output:</strong><br><pre style="margin-top: 5px; white-space: pre-wrap;">${result.stdout}</pre></div>`;
             }
             if (result.stderr) {
-                logsHtml += `<div class="log-entry log-error"><strong>Standard Error:</strong><br><pre style="margin-top: 5px;">${result.stderr}</pre></div>`;
+                logsHtml += `<div class="log-entry log-error"><strong>Standard Error:</strong><br><pre style="margin-top: 5px; white-space: pre-wrap;">${result.stderr}</pre></div>`;
+            }
+            // Add exception traceback if available
+            if (response.exception_traceback) {
+                logsHtml += `<div class="log-entry log-error"><strong>Exception Traceback:</strong><br><pre style="margin-top: 5px; white-space: pre-wrap; background: #2c3e50; color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto;">${response.exception_traceback}</pre></div>`;
+            }
+            // Check for exception in response data
+            if (responseBody && typeof responseBody === 'object' && responseBody._exception) {
+                logsHtml += `<div class="log-entry log-error"><strong>Exception Details:</strong><br>`;
+                logsHtml += `<div style="margin-top: 5px; padding: 10px; background: #2c3e50; color: #ecf0f1; border-radius: 5px;">`;
+                logsHtml += `<strong>Type:</strong> ${responseBody._exception.type || 'Unknown'}<br>`;
+                logsHtml += `<strong>Message:</strong> ${responseBody._exception.message || 'No message'}<br>`;
+                if (responseBody._exception.traceback) {
+                    logsHtml += `<strong>Traceback:</strong><br><pre style="white-space: pre-wrap; overflow-x: auto; margin-top: 5px;">${responseBody._exception.traceback}</pre>`;
+                }
+                logsHtml += `</div></div>`;
             }
             document.getElementById('logs-content').innerHTML = logsHtml || '<p style="color: #7f8c8d;">No logs available</p>';
             

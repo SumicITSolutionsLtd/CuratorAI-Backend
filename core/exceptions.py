@@ -159,13 +159,18 @@ def custom_exception_handler(exc, context):
             }
         }
         
-        # In development, include the actual error message
+        # In development, include the actual error message and full traceback
         from django.conf import settings
+        import traceback
         if settings.DEBUG:
             error_response['error']['message'] = str(exc)
+            # Get full traceback
+            tb_lines = traceback.format_exception(type(exc), exc, exc.__traceback__)
+            full_traceback = ''.join(tb_lines)
             error_response['error']['details'] = {
                 'exception_type': type(exc).__name__,
-                'traceback': str(exc)
+                'exception_message': str(exc),
+                'traceback': full_traceback
             }
         
         response = Response(
