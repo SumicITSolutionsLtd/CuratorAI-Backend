@@ -161,7 +161,14 @@ class PostCreateView(generics.CreateAPIView):
         
         try:
             # Log incoming request data for debugging
+            logger.info(f"Creating post with data keys: {list(request.data.keys())}")
+            logger.info(f"Creating post with FILES keys: {list(request.FILES.keys())}")
             logger.info(f"Creating post with data: {dict(request.data)}")
+            
+            # Log file information
+            if request.FILES:
+                for key, file in request.FILES.items():
+                    logger.info(f"File '{key}': name={file.name}, size={file.size}, content_type={file.content_type}")
             
             serializer = self.get_serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
@@ -179,12 +186,38 @@ class PostCreateView(generics.CreateAPIView):
             
             # Handle legacy multipart/form-data image uploads (if images_data/image_urls not provided)
             # This supports the old 'images' field name for backward compatibility
+            # Backend will upload to S3 if enabled, otherwise will try filesystem
             try:
                 if not post.images.exists():
-                    images = request.FILES.getlist('images')
-                    for idx, image in enumerate(images[:10]):  # Max 10 images
-                        if image:  # Check if file is not None
-                            PostImage.objects.create(post=post, image=image, order=idx)
+                    # Check for various possible field names
+                    images = request.FILES.getlist('images') or request.FILES.getlist('image') or request.FILES.getlist('files')
+                    logger.info(f"Found {len(images)} images in request.FILES (legacy field names)")
+                    
+                    if images:
+                        from django.conf import settings
+                        use_s3 = getattr(settings, 'USE_S3', False)
+                        
+                        for idx, image in enumerate(images[:10]):  # Max 10 images
+                            if image:  # Check if file is not None
+                                try:
+                                    if use_s3:
+                                        # S3 is enabled - upload to S3
+                                        PostImage.objects.create(post=post, image=image, order=idx)
+                                        logger.info(f"Uploaded legacy image {idx} to S3 for post {post.id}")
+                                    else:
+                                        # Try filesystem (will fail on Vercel)
+                                        try:
+                                            PostImage.objects.create(post=post, image=image, order=idx)
+                                            logger.info(f"Saved legacy image {idx} to filesystem for post {post.id}")
+                                        except (OSError, IOError) as fs_error:
+                                            logger.warning(f"Cannot save legacy image to filesystem (read-only): {str(fs_error)}")
+                                            logger.warning("S3 is not enabled. Please enable S3 or use image_urls field.")
+                                            # Create empty PostImage record
+                                            PostImage.objects.create(post=post, order=idx)
+                                except Exception as file_error:
+                                    logger.error(f"Failed to save legacy image {idx}: {str(file_error)}", exc_info=True)
+                                    # Continue with other images
+                                    continue
             except Exception as img_upload_error:
                 logger.warning(f"Error handling legacy image uploads: {str(img_upload_error)}")
                 # Don't fail the entire request if legacy image upload fails

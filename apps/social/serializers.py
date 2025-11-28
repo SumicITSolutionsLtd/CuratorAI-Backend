@@ -16,16 +16,19 @@ class PostImageSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
     
     def get_image(self, obj):
-        """Return image URL from image_url field or ImageField as fallback."""
+        """Return image URL from image_url field or ImageField (S3/local) as fallback."""
         try:
             # Prioritize image_url field (external URL) over ImageField - ALWAYS
             if obj.image_url and obj.image_url.strip():
                 return obj.image_url
             # Fallback to ImageField if image_url is not set or empty
+            # If S3 is enabled, obj.image.url will return S3 URL automatically
             if obj.image:
                 request = self.context.get('request')
                 if request:
+                    # Build absolute URI - if S3 is enabled, this will be S3 URL
                     return request.build_absolute_uri(obj.image.url)
+                # Return the URL directly (S3 URL if S3 enabled, local URL otherwise)
                 return obj.image.url
         except Exception:
             pass
@@ -239,6 +242,9 @@ class PostCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         """Create post and handle images."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
             # Extract image data
             images_data = validated_data.pop('images_data', []) or []
@@ -255,16 +261,72 @@ class PostCreateSerializer(serializers.ModelSerializer):
             post = Post.objects.create(user=user, **validated_data)
             
             # Handle file uploads (from images_data field)
+            # Upload to S3 if enabled, otherwise save to filesystem or use image_url field
             if images_data:
+                from django.conf import settings
+                use_s3 = getattr(settings, 'USE_S3', False)
+                
                 for idx, image_file in enumerate(images_data):
                     if image_file:  # Check if file is not None
-                        PostImage.objects.create(post=post, image=image_file, order=idx)
+                        try:
+                            if use_s3:
+                                # S3 is enabled - upload to S3, Django will handle it automatically
+                                # The ImageField will automatically upload to S3 when saved
+                                post_image = PostImage.objects.create(post=post, image=image_file, order=idx)
+                                # Also save the S3 URL to image_url field for redundancy
+                                if post_image.image:
+                                    try:
+                                        # Get the S3 URL from the ImageField
+                                        s3_url = post_image.image.url
+                                        # Update image_url field with S3 URL
+                                        post_image.image_url = s3_url
+                                        post_image.save(update_fields=['image_url'])
+                                        logger.info(f"Uploaded image {idx} to S3 for post {post.id}, URL: {s3_url}")
+                                    except Exception as url_error:
+                                        logger.warning(f"Could not get S3 URL for image {idx}: {str(url_error)}")
+                                else:
+                                    logger.warning(f"Image {idx} uploaded but URL not available")
+                            else:
+                                # S3 not enabled - try to save to filesystem
+                                # On Vercel, this will fail, so we'll catch and use image_url instead
+                                try:
+                                    post_image = PostImage.objects.create(post=post, image=image_file, order=idx)
+                                    # Try to get the URL and save to image_url field
+                                    if post_image.image:
+                                        try:
+                                            request = self.context.get('request')
+                                            if request:
+                                                file_url = request.build_absolute_uri(post_image.image.url)
+                                            else:
+                                                file_url = post_image.image.url
+                                            post_image.image_url = file_url
+                                            post_image.save(update_fields=['image_url'])
+                                        except Exception:
+                                            pass
+                                    logger.info(f"Saved image {idx} to filesystem for post {post.id}")
+                                except (OSError, IOError) as fs_error:
+                                    # Filesystem is read-only (Vercel) - can't save files
+                                    logger.warning(f"Cannot save image to filesystem (read-only): {str(fs_error)}")
+                                    logger.warning("S3 is not enabled. Please enable S3 or use image_urls instead.")
+                                    # Create PostImage with only image_url (will be empty, but post is created)
+                                    # Frontend should use image_urls field instead
+                                    PostImage.objects.create(post=post, order=idx)
+                                    logger.warning(f"Created PostImage {idx} without image file for post {post.id}. Please enable S3 or use image_urls.")
+                        except Exception as img_error:
+                            logger.error(f"Error saving image {idx}: {str(img_error)}", exc_info=True)
+                            # Continue with other images even if one fails
+                            continue
             
             # Handle URL-based images (from image_urls field)
             if image_urls:
                 for idx, image_url in enumerate(image_urls):
                     if image_url and image_url.strip():  # Check if URL is not empty
-                        PostImage.objects.create(post=post, image_url=image_url, order=idx + len(images_data))
+                        try:
+                            PostImage.objects.create(post=post, image_url=image_url, order=idx + len(images_data))
+                            logger.info(f"Saved image URL {idx} for post {post.id}")
+                        except Exception as url_error:
+                            logger.error(f"Error saving image URL {idx}: {str(url_error)}", exc_info=True)
+                            continue
             
             return post
         except serializers.ValidationError:
@@ -272,8 +334,6 @@ class PostCreateSerializer(serializers.ModelSerializer):
             raise
         except Exception as e:
             # Log the error for debugging
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error creating post: {str(e)}", exc_info=True)
             raise serializers.ValidationError(f"Error creating post: {str(e)}")
 
