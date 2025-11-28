@@ -17,15 +17,18 @@ class PostImageSerializer(serializers.ModelSerializer):
     
     def get_image(self, obj):
         """Return image URL from image_url field or ImageField as fallback."""
-        # Prioritize image_url field (external URL) over ImageField - ALWAYS
-        if obj.image_url and obj.image_url.strip():
-            return obj.image_url
-        # Fallback to ImageField if image_url is not set or empty
-        if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
+        try:
+            # Prioritize image_url field (external URL) over ImageField - ALWAYS
+            if obj.image_url and obj.image_url.strip():
+                return obj.image_url
+            # Fallback to ImageField if image_url is not set or empty
+            if obj.image:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(obj.image.url)
+                return obj.image.url
+        except Exception:
+            pass
         return None
 
 
@@ -88,11 +91,12 @@ class PostSerializer(serializers.ModelSerializer):
     images = PostImageSerializer(many=True, read_only=True)
     is_liked = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
+    outfit_id = serializers.IntegerField(source='outfit.id', read_only=True, allow_null=True)
     
     class Meta:
         model = Post
         fields = [
-            'id', 'user', 'caption', 'tags', 'outfit', 'tagged_items',
+            'id', 'user', 'caption', 'tags', 'outfit', 'outfit_id', 'tagged_items',
             'location_name', 'images', 'likes_count', 'comments_count', 
             'shares_count', 'saves_count', 'views_count', 'is_liked', 
             'is_saved', 'privacy', 'created_at', 'updated_at'
@@ -103,15 +107,21 @@ class PostSerializer(serializers.ModelSerializer):
         ]
     
     def get_is_liked(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return PostLike.objects.filter(user=request.user, post=obj).exists()
+        try:
+            request = self.context.get('request')
+            if request and request.user and request.user.is_authenticated:
+                return PostLike.objects.filter(user=request.user, post=obj).exists()
+        except Exception:
+            pass
         return False
     
     def get_is_saved(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return PostSave.objects.filter(user=request.user, post=obj).exists()
+        try:
+            request = self.context.get('request')
+            if request and request.user and request.user.is_authenticated:
+                return PostSave.objects.filter(user=request.user, post=obj).exists()
+        except Exception:
+            pass
         return False
 
 

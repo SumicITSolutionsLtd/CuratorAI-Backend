@@ -161,11 +161,26 @@ class PostCreateView(generics.CreateAPIView):
                     if image:  # Check if file is not None
                         PostImage.objects.create(post=post, image=image, order=idx)
             
-            # Return wrapped response
+            # Return wrapped response - refresh from DB to ensure all relationships are loaded
+            post.refresh_from_db()
+            try:
+                serializer_data = PostSerializer(post, context={'request': request}).data
+            except Exception as serialization_error:
+                # Log serialization error
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error serializing post response: {str(serialization_error)}", exc_info=True)
+                # Return a simplified response if serialization fails
+                serializer_data = {
+                    'id': post.id,
+                    'caption': post.caption,
+                    'created_at': post.created_at.isoformat() if post.created_at else None,
+                }
+            
             return Response({
                 'success': True,
                 'message': 'Post created successfully',
-                'data': PostSerializer(post, context={'request': request}).data
+                'data': serializer_data
             }, status=status.HTTP_201_CREATED)
         except serializers.ValidationError as e:
             # Re-raise validation errors as-is
