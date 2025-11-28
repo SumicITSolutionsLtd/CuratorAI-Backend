@@ -26,6 +26,7 @@ class WardrobeItemSerializer(serializers.ModelSerializer):
     """Serializer for wardrobe items."""
     images = WardrobeItemImageSerializer(many=True, read_only=True)
     attributes = WardrobeItemAttributeSerializer(many=True, read_only=True)
+    primary_image = serializers.SerializerMethodField()
     
     class Meta:
         model = WardrobeItem
@@ -36,6 +37,32 @@ class WardrobeItemSerializer(serializers.ModelSerializer):
             'last_worn_date', 'images', 'attributes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'times_worn', 'last_worn_date', 'created_at', 'updated_at']
+    
+    def get_primary_image(self, obj):
+        """Return image URL from primary_image_url field or ImageField as fallback."""
+        # Prioritize primary_image_url field (external URL) over ImageField
+        if obj.primary_image_url:
+            return obj.primary_image_url
+        # Fallback to ImageField if primary_image_url is not set
+        if obj.primary_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.primary_image.url)
+            return obj.primary_image.url
+        return None
+    
+    def get_primary_image(self, obj):
+        """Return image URL from primary_image_url field or ImageField as fallback."""
+        # Prioritize primary_image_url field (external URL) over ImageField
+        if obj.primary_image_url:
+            return obj.primary_image_url
+        # Fallback to ImageField if primary_image_url is not set
+        if obj.primary_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.primary_image.url)
+            return obj.primary_image.url
+        return None
 
 
 class WardrobeItemCreateSerializer(serializers.ModelSerializer):

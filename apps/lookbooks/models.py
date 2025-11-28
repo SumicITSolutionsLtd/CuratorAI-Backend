@@ -30,6 +30,7 @@ class Lookbook(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     cover_image = models.ImageField(upload_to='lookbooks/', blank=True)
+    cover_image_url = models.URLField(blank=True, help_text='External cover image URL (used when cover_image is not available)')
     
     # Categorization
     season = models.CharField(max_length=20, choices=SEASON_CHOICES)

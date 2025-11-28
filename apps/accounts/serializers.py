@@ -29,6 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
     style_preference = StylePreferenceSerializer(read_only=True)
     followers_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -39,6 +40,19 @@ class UserSerializer(serializers.ModelSerializer):
             'followers_count', 'following_count', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'is_verified', 'terms_accepted_at', 'created_at', 'updated_at']
+    
+    def get_avatar(self, obj):
+        """Return avatar URL from avatar_url field or ImageField as fallback."""
+        # Prioritize avatar_url field (external URL) over ImageField
+        if obj.avatar_url:
+            return obj.avatar_url
+        # Fallback to ImageField if avatar_url is not set
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
     
     def get_followers_count(self, obj):
         return obj.followers.count()

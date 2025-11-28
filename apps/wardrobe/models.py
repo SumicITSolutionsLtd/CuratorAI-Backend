@@ -61,6 +61,7 @@ class WardrobeItem(models.Model):
     
     # Images
     primary_image = models.ImageField(upload_to='wardrobe/items/', null=True, blank=True)
+    primary_image_url = models.URLField(blank=True, help_text='External image URL (used when primary_image is not available)')
     
     # Additional Details
     season = models.CharField(max_length=20, choices=SEASON_CHOICES, default='all')

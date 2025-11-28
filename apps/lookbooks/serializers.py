@@ -9,10 +9,24 @@ from .models import Lookbook, LookbookOutfit, LookbookLike
 
 class UserBasicSerializer(serializers.ModelSerializer):
     """Basic user serializer."""
+    avatar = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'avatar', 'is_verified']
+    
+    def get_avatar(self, obj):
+        """Return avatar URL from avatar_url field or ImageField as fallback."""
+        # Prioritize avatar_url field (external URL) over ImageField
+        if obj.avatar_url:
+            return obj.avatar_url
+        # Fallback to ImageField if avatar_url is not set
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
 
 
 class LookbookOutfitSerializer(serializers.ModelSerializer):
@@ -32,6 +46,7 @@ class LookbookSerializer(serializers.ModelSerializer):
     is_liked = serializers.SerializerMethodField()
     price_range = serializers.SerializerMethodField()
     total_value = serializers.SerializerMethodField()
+    cover_image = serializers.SerializerMethodField()
     
     class Meta:
         model = Lookbook
@@ -43,6 +58,19 @@ class LookbookSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'likes_count', 'views_count', 'comments_count', 'created_at', 'updated_at']
+    
+    def get_cover_image(self, obj):
+        """Return image URL from cover_image_url field or ImageField as fallback."""
+        # Prioritize cover_image_url field (external URL) over ImageField
+        if obj.cover_image_url:
+            return obj.cover_image_url
+        # Fallback to ImageField if cover_image_url is not set
+        if obj.cover_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.cover_image.url)
+            return obj.cover_image.url
+        return None
     
     def get_outfits_count(self, obj):
         return obj.outfits.count()

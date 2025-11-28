@@ -234,7 +234,7 @@ class OutfitSaveView(views.APIView):
     
     @extend_schema(
         summary="Save outfit",
-        description="Save or unsave an outfit to user's collection",
+        description="Save an outfit to user's collection. If already saved, does nothing.",
         tags=["Outfits"],
         request=inline_serializer(
             name='SaveOutfitRequest',
@@ -244,6 +244,14 @@ class OutfitSaveView(views.APIView):
         ),
         responses={
             200: inline_serializer(
+                name='OutfitSaveResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'saves_count': serializers.IntegerField(),
+                }
+            ),
+            201: inline_serializer(
                 name='OutfitSaveResponse',
                 fields={
                     'success': serializers.BooleanField(),
@@ -278,12 +286,54 @@ class OutfitSaveView(views.APIView):
             outfit.saves_count += 1
             outfit.save(update_fields=['saves_count'])
             message = 'Outfit saved'
+            status_code = status.HTTP_201_CREATED
         else:
-            # Unsave
+            # Already saved, do nothing
+            message = 'Outfit already saved'
+            status_code = status.HTTP_200_OK
+        
+        return Response({
+            'success': True,
+            'message': message,
+            'saves_count': outfit.saves_count
+        }, status=status_code)
+    
+    @extend_schema(
+        summary="Unsave outfit",
+        description="Remove an outfit from user's saved collection",
+        tags=["Outfits"],
+        responses={
+            200: inline_serializer(
+                name='OutfitUnsaveResponse',
+                fields={
+                    'success': serializers.BooleanField(),
+                    'message': serializers.CharField(),
+                    'saves_count': serializers.IntegerField(),
+                }
+            ),
+            401: UnauthorizedErrorResponse,
+            404: NotFoundErrorResponse,
+        }
+    )
+    def delete(self, request, pk):
+        try:
+            outfit = Outfit.objects.get(pk=pk)
+        except Outfit.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Outfit not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if saved
+        try:
+            save = OutfitSave.objects.get(user=request.user, outfit=outfit)
             save.delete()
+            # Decrement saves count
             outfit.saves_count = max(0, outfit.saves_count - 1)
             outfit.save(update_fields=['saves_count'])
             message = 'Outfit removed from saved'
+        except OutfitSave.DoesNotExist:
+            message = 'Outfit was not saved'
         
         return Response({
             'success': True,

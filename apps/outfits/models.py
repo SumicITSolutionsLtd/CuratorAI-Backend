@@ -33,6 +33,7 @@ class Outfit(models.Model):
     
     # Images
     main_image = models.ImageField(upload_to='outfits/', null=True, blank=True)
+    main_image_url = models.URLField(blank=True, help_text='External image URL (used when main_image is not available)')
     thumbnail = models.ImageField(upload_to='outfits/thumbnails/', null=True, blank=True)
     
     # Categorization
@@ -92,6 +93,7 @@ class OutfitItem(models.Model):
     name = models.CharField(max_length=255)
     brand = models.CharField(max_length=100, blank=True)
     image = models.ImageField(upload_to='outfit_items/', null=True, blank=True)
+    image_url = models.URLField(blank=True, help_text='External image URL (used when image is not available)')
     
     # Product Information
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

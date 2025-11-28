@@ -8,11 +8,25 @@ from .models import Post, PostImage, PostLike, PostSave, Comment, CommentLike
 
 class PostImageSerializer(serializers.ModelSerializer):
     """Serializer for post images."""
+    image = serializers.SerializerMethodField()
     
     class Meta:
         model = PostImage
         fields = ['id', 'image', 'order', 'created_at']
         read_only_fields = ['id', 'created_at']
+    
+    def get_image(self, obj):
+        """Return image URL from image_url field or ImageField as fallback."""
+        # Prioritize image_url field (external URL) over ImageField
+        if obj.image_url:
+            return obj.image_url
+        # Fallback to ImageField if image_url is not set
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 
 class UserBasicSerializer(serializers.ModelSerializer):

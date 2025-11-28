@@ -62,6 +62,9 @@ def show_missing_tables():
         'post_saves': 'Social app',
         'comments': 'Social app',
         'comment_likes': 'Social app',
+        'shopping_carts': 'Cart app',
+        'cart_items': 'Cart app',
+        'promo_codes': 'Cart app',
     }
     
     missing = []
@@ -80,11 +83,11 @@ def show_missing_tables():
 
 
 def run_migrations():
-    """Run migrations for lookbooks, wardrobe, and social apps."""
-    print("\n🔄 Running migrations for lookbooks, wardrobe, and social apps...")
+    """Run migrations for lookbooks, wardrobe, social, and cart apps."""
+    print("\n🔄 Running migrations for lookbooks, wardrobe, social, and cart apps...")
     try:
         # Run migrations for each app separately
-        apps_to_migrate = ['lookbooks', 'wardrobe', 'social']
+        apps_to_migrate = ['accounts', 'lookbooks', 'outfits', 'wardrobe', 'social', 'cart']
         
         for app in apps_to_migrate:
             print(f"\n  Migrating {app}...")
@@ -132,15 +135,13 @@ def main():
     
     if not missing:
         print("\n✅ All required tables already exist!")
-        return True
+        print("\n🔄 Running migrations to add new columns (image_url fields)...")
+    else:
+        print(f"\n⚠️  Found {len(missing)} missing table(s)")
+        print("\n⚠️  WARNING: This will create new tables in your production database.")
+        print("   Existing data will NOT be affected.")
     
-    print(f"\n⚠️  Found {len(missing)} missing table(s)")
-    
-    # Ask for confirmation (in production, be careful)
-    print("\n⚠️  WARNING: This will create new tables in your production database.")
-    print("   Existing data will NOT be affected.")
-    
-    # Run migrations
+    # Always run migrations to ensure all columns are up to date
     if run_migrations():
         # Verify tables were created
         print("\n📋 Verifying tables were created...")

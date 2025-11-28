@@ -7,6 +7,7 @@ from .models import Outfit, OutfitItem, OutfitLike, OutfitSave
 
 class OutfitItemSerializer(serializers.ModelSerializer):
     """Serializer for OutfitItem model."""
+    image = serializers.SerializerMethodField()
     
     class Meta:
         model = OutfitItem
@@ -15,6 +16,19 @@ class OutfitItemSerializer(serializers.ModelSerializer):
             'size', 'color', 'material', 'purchase_url', 'affiliate_link',
             'retailer', 'is_available', 'product_id'
         ]
+    
+    def get_image(self, obj):
+        """Return image URL from image_url field or ImageField as fallback."""
+        # Prioritize image_url field (external URL) over ImageField
+        if obj.image_url:
+            return obj.image_url
+        # Fallback to ImageField if image_url is not set
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 
 class OutfitSerializer(serializers.ModelSerializer):
@@ -23,6 +37,7 @@ class OutfitSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source='user.username', read_only=True)
     is_liked = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
+    main_image = serializers.SerializerMethodField()
     
     class Meta:
         model = Outfit
@@ -37,6 +52,19 @@ class OutfitSerializer(serializers.ModelSerializer):
             'user', 'likes_count', 'saves_count', 'views_count',
             'ai_generated', 'confidence_score', 'created_at', 'updated_at'
         ]
+    
+    def get_main_image(self, obj):
+        """Return image URL from main_image_url field or ImageField as fallback."""
+        # Prioritize image_url field (external URL) over ImageField
+        if obj.main_image_url:
+            return obj.main_image_url
+        # Fallback to ImageField if image_url is not set
+        if obj.main_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.main_image.url)
+            return obj.main_image.url
+        return None
     
     def get_is_liked(self, obj):
         request = self.context.get('request')

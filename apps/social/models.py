@@ -69,6 +69,7 @@ class PostImage(models.Model):
     """
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='posts/')
+    image_url = models.URLField(blank=True, help_text='External image URL (used when image is not available)')
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     
