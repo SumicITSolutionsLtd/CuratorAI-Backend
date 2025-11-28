@@ -991,6 +991,16 @@
                         "refresh": "your_refresh_token_here"
                     }, null, 2)
                 },
+                '/api/v1/auth/oauth/google/': {
+                    'POST': JSON.stringify({
+                        "access_token": "ya29.dummy-google-oauth-token-replace-with-real-token-from-google-sign-in"
+                    }, null, 2)
+                },
+                '/api/v1/auth/oauth/facebook/': {
+                    'POST': JSON.stringify({
+                        "access_token": "EAABsbCS1iHgBO7-dummy-facebook-oauth-token-replace-with-real-token-from-facebook-login"
+                    }, null, 2)
+                },
                 '/api/v1/social/posts/': {
                     'POST': JSON.stringify({
                         "caption": "Check out my new outfit!",
@@ -1095,6 +1105,18 @@
                 if (lowerPath.includes('/refresh')) {
                     bodyField.value = JSON.stringify({
                         "refresh": "your_refresh_token_here"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/oauth/google')) {
+                    bodyField.value = JSON.stringify({
+                        "access_token": "ya29.dummy-google-oauth-token-replace-with-real-token-from-google-sign-in"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/oauth/facebook')) {
+                    bodyField.value = JSON.stringify({
+                        "access_token": "EAABsbCS1iHgBO7-dummy-facebook-oauth-token-replace-with-real-token-from-facebook-login"
                     }, null, 2);
                     return;
                 }
@@ -1438,7 +1460,14 @@
             // Add helpful hints for common errors
             if (statusCode === 400) {
                 const errorData = response.data || response.parsed_content || {};
-                if (errorData.details || errorData.error) {
+                const errorMessage = errorData.message || errorData.error || '';
+                const path = result.request?.path || '';
+                
+                // Special handling for OAuth endpoints
+                if (path.includes('/oauth/') && (errorMessage.includes('token') || errorMessage.includes('Token'))) {
+                    frontendSummary += `\n\n💡 Tip: OAuth endpoints require real access tokens from Google/Facebook. The dummy token provided is just a placeholder. To test with a real token:\n1. Get a token from Google/Facebook Sign-In\n2. Replace the dummy token in the request body\n3. Test again`;
+                    backendSummary += `\n\nOAuth token validation failed. The endpoint requires a valid OAuth access token from the provider. Dummy tokens will fail validation.`;
+                } else if (errorData.details || errorData.error) {
                     frontendSummary += `\n\n💡 Tip: Check the "Response Details" section below to see what fields are missing or invalid.`;
                     backendSummary += `\n\nValidation errors: ${JSON.stringify(errorData.details || errorData.error, null, 2)}`;
                 } else {
