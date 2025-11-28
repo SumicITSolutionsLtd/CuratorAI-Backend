@@ -88,6 +88,9 @@ def custom_exception_handler(exc, context):
     # Generate request ID for tracking
     request_id = str(uuid.uuid4())[:8]
     
+    # Get request from context for CORS headers
+    request = context.get('request') if context else None
+    
     # Call DRF's default exception handler first
     response = exception_handler(exc, context)
     
@@ -185,6 +188,24 @@ def custom_exception_handler(exc, context):
             data=error_response,
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+    
+    # Add CORS headers to all responses (including errors)
+    # This ensures CORS headers are present even when errors occur
+    if response:
+        request = context.get('request') if context else None
+        if request:
+            origin = request.META.get('HTTP_ORIGIN', '')
+            if origin:
+                from django.conf import settings
+                # Check if origin is allowed
+                allowed_origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', [])
+                allow_all = getattr(settings, 'CORS_ALLOW_ALL_ORIGINS', False)
+                
+                if allow_all or origin in allowed_origins:
+                    response['Access-Control-Allow-Origin'] = origin
+                    response['Access-Control-Allow-Credentials'] = 'true'
+                    response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+                    response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken, X-Requested-With'
     
     return response
 

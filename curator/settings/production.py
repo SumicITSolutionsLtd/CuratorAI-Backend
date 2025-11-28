@@ -49,7 +49,12 @@ CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bo
 # Get CORS allowed origins from environment
 cors_origins_str = config('CORS_ALLOWED_ORIGINS', default='', cast=str)
 if cors_origins_str:
+    # Parse from environment variable
     CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
+    # Always ensure frontend domain is included
+    frontend_url = 'https://curator-ai-phi.vercel.app'
+    if frontend_url not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(frontend_url)
 else:
     # Default to frontend domain
     CORS_ALLOWED_ORIGINS = [
