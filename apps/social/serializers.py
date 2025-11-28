@@ -134,7 +134,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
         model = Post
         fields = ['caption', 'tags', 'outfit_id', 'tagged_items', 'location_name', 'location_lat', 'location_lng', 'privacy', 'images_data', 'image_urls']
         extra_kwargs = {
-            'caption': {'required': True},
+            'caption': {'required': True, 'allow_blank': True},  # Allow blank to pass through to validation
             'tags': {'required': False},
             'outfit_id': {'required': False},
             'tagged_items': {'required': False},
@@ -144,8 +144,30 @@ class PostCreateSerializer(serializers.ModelSerializer):
             'privacy': {'required': False},
         }
     
+    def validate_caption(self, value):
+        """Validate caption is not blank."""
+        # Handle None, empty string, or whitespace-only strings
+        if value is None:
+            raise serializers.ValidationError("Caption is required.")
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise serializers.ValidationError("Caption cannot be blank. Please provide a caption for your post.")
+        return value
+    
     def validate(self, data):
         """Set defaults for optional fields."""
+        # Ensure caption is present and not blank (double-check in case validate_caption wasn't called)
+        caption = data.get('caption')
+        if caption is None:
+            raise serializers.ValidationError({'caption': 'Caption is required.'})
+        if isinstance(caption, str) and not caption.strip():
+            raise serializers.ValidationError({'caption': 'Caption cannot be blank. Please provide a caption for your post.'})
+        
+        # Strip caption if it's a string
+        if isinstance(caption, str):
+            data['caption'] = caption.strip()
+        
         if 'tags' not in data or not data.get('tags'):
             data['tags'] = []
         if 'tagged_items' not in data or not data.get('tagged_items'):
