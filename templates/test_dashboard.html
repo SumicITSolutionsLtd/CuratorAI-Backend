@@ -1544,18 +1544,22 @@
                 }
             }
             
-            // Add exception traceback if available
-            if (response.exception_traceback) {
-                responseText += `\n\nException Traceback:\n${response.exception_traceback}`;
-            }
-            
-            // Check for exception info in response data
+            // Note: Exception traceback is shown in the Logs section for better readability
+            // Check for exception info in response data and add a summary
             if (responseBody && typeof responseBody === 'object' && responseBody._exception) {
-                responseText += `\n\nException Details:\n`;
+                responseText += `\n\n⚠️ Exception occurred (see Logs section for full traceback):\n`;
                 responseText += `Type: ${responseBody._exception.type || 'Unknown'}\n`;
-                responseText += `Message: ${responseBody._exception.message || 'No message'}\n`;
-                if (responseBody._exception.traceback) {
-                    responseText += `\nTraceback:\n${responseBody._exception.traceback}`;
+                responseText += `Message: ${responseBody._exception.message || 'No message'}`;
+            } else if (responseBody && typeof responseBody === 'object' && responseBody.error && responseBody.error.details) {
+                const details = responseBody.error.details;
+                if (details.exception_type || details.traceback) {
+                    responseText += `\n\n⚠️ Exception occurred (see Logs section for full traceback):\n`;
+                    if (details.exception_type) {
+                        responseText += `Type: ${details.exception_type}\n`;
+                    }
+                    if (details.exception_message) {
+                        responseText += `Message: ${details.exception_message}`;
+                    }
                 }
             }
             
@@ -1584,20 +1588,52 @@
             if (result.stderr) {
                 logsHtml += `<div class="log-entry log-error"><strong>Standard Error:</strong><br><pre style="margin-top: 5px; white-space: pre-wrap;">${result.stderr}</pre></div>`;
             }
-            // Add exception traceback if available
-            if (response.exception_traceback) {
-                logsHtml += `<div class="log-entry log-error"><strong>Exception Traceback:</strong><br><pre style="margin-top: 5px; white-space: pre-wrap; background: #2c3e50; color: #ecf0f1; padding: 10px; border-radius: 5px; overflow-x: auto;">${response.exception_traceback}</pre></div>`;
+            // Add exception traceback if available (prioritize from response data details)
+            let tracebackToShow = null;
+            let exceptionType = null;
+            let exceptionMessage = null;
+            
+            // First check response data for exception details
+            if (responseBody && typeof responseBody === 'object' && responseBody.error && responseBody.error.details) {
+                const details = responseBody.error.details;
+                exceptionType = details.exception_type;
+                exceptionMessage = details.exception_message;
+                tracebackToShow = details.traceback;
+            } else if (responseBody && typeof responseBody === 'object' && responseBody._exception) {
+                exceptionType = responseBody._exception.type;
+                exceptionMessage = responseBody._exception.message;
+                tracebackToShow = responseBody._exception.traceback;
+            } else if (response.exception_traceback) {
+                tracebackToShow = response.exception_traceback;
             }
-            // Check for exception in response data
-            if (responseBody && typeof responseBody === 'object' && responseBody._exception) {
+            
+            // Display exception information
+            if (exceptionType || tracebackToShow) {
                 logsHtml += `<div class="log-entry log-error"><strong>Exception Details:</strong><br>`;
                 logsHtml += `<div style="margin-top: 5px; padding: 10px; background: #2c3e50; color: #ecf0f1; border-radius: 5px;">`;
-                logsHtml += `<strong>Type:</strong> ${responseBody._exception.type || 'Unknown'}<br>`;
-                logsHtml += `<strong>Message:</strong> ${responseBody._exception.message || 'No message'}<br>`;
-                if (responseBody._exception.traceback) {
-                    logsHtml += `<strong>Traceback:</strong><br><pre style="white-space: pre-wrap; overflow-x: auto; margin-top: 5px;">${responseBody._exception.traceback}</pre>`;
+                if (exceptionType) {
+                    logsHtml += `<strong>Type:</strong> <code style="background: #34495e; padding: 2px 6px; border-radius: 3px;">${exceptionType}</code><br><br>`;
+                }
+                if (exceptionMessage) {
+                    logsHtml += `<strong>Message:</strong> <span style="color: #e74c3c;">${exceptionMessage.replace(/\n/g, '<br>')}</span><br><br>`;
+                }
+                if (tracebackToShow) {
+                    logsHtml += `<strong>Full Traceback:</strong><br><pre style="white-space: pre-wrap; overflow-x: auto; margin-top: 5px; font-size: 0.9em; line-height: 1.4;">${tracebackToShow}</pre>`;
                 }
                 logsHtml += `</div></div>`;
+                
+                // Add helpful hints for common errors
+                if (exceptionType === 'ProgrammingError' && exceptionMessage && exceptionMessage.includes('does not exist')) {
+                    const tableMatch = exceptionMessage.match(/relation "(\w+)" does not exist/);
+                    if (tableMatch) {
+                        const tableName = tableMatch[1];
+                        logsHtml += `<div class="log-entry log-info" style="background: #3498db; color: white; padding: 10px; border-radius: 5px; margin-top: 10px;">`;
+                        logsHtml += `<strong>💡 Database Migration Hint:</strong><br>`;
+                        logsHtml += `The table <code>${tableName}</code> doesn't exist in the database. This usually means migrations haven't been run.`;
+                        logsHtml += `<br><br><strong>To fix:</strong> Run <code>python manage.py migrate</code> to create the missing tables.`;
+                        logsHtml += `</div>`;
+                    }
+                }
             }
             document.getElementById('logs-content').innerHTML = logsHtml || '<p style="color: #7f8c8d;">No logs available</p>';
             
