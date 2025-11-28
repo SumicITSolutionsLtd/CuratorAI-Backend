@@ -118,6 +118,9 @@ class OutfitItem(models.Model):
     class Meta:
         db_table = 'outfit_items'
         ordering = ['item_type', 'created_at']
+        indexes = [
+            models.Index(fields=['outfit', 'item_type']),
+        ]
     
     def __str__(self):
         return f"{self.item_type}: {self.name}"

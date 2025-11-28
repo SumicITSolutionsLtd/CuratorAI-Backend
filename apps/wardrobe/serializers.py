@@ -70,16 +70,43 @@ class WardrobeItemCreateSerializer(serializers.ModelSerializer):
     attributes = serializers.ListField(
         child=serializers.DictField(),
         required=False,
-        write_only=True
+        write_only=True,
+        default=list
     )
+    primary_image_url = serializers.URLField(required=False, allow_blank=True)
     
     class Meta:
         model = WardrobeItem
         fields = [
             'category', 'name', 'brand', 'color', 'size', 
-            'price', 'currency', 'primary_image', 'season', 'tags', 
+            'price', 'currency', 'primary_image', 'primary_image_url', 'season', 'tags', 
             'notes', 'purchase_link', 'purchase_date', 'attributes'
         ]
+        extra_kwargs = {
+            'category': {'required': True},
+            'name': {'required': True},
+            'brand': {'required': False, 'allow_blank': True},
+            'color': {'required': True},
+            'size': {'required': False, 'allow_blank': True},
+            'price': {'required': False},
+            'currency': {'required': False},
+            'primary_image': {'required': False},
+            'season': {'required': False},
+            'tags': {'required': False},
+            'notes': {'required': False, 'allow_blank': True},
+            'purchase_link': {'required': False, 'allow_blank': True},
+            'purchase_date': {'required': False},
+        }
+    
+    def validate(self, data):
+        """Set defaults for optional fields."""
+        if 'season' not in data or not data.get('season'):
+            data['season'] = 'all'
+        if 'tags' not in data or not data.get('tags'):
+            data['tags'] = []
+        if 'currency' not in data or not data.get('currency'):
+            data['currency'] = 'USD'
+        return data
     
     def create(self, validated_data):
         attributes_data = validated_data.pop('attributes', [])

@@ -93,7 +93,17 @@ class OutfitListCreateView(generics.ListCreateAPIView):
         }
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        instance = serializer.instance
+        
+        # Return wrapped response
+        return Response({
+            'success': True,
+            'message': 'Outfit created successfully',
+            'data': OutfitSerializer(instance, context={'request': request}).data
+        }, status=status.HTTP_201_CREATED)
 
 
 class OutfitDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -101,15 +111,24 @@ class OutfitDetailView(generics.RetrieveUpdateDestroyAPIView):
     Retrieve, update, or delete an outfit.
     """
     queryset = Outfit.objects.all()
-    serializer_class = OutfitSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return OutfitCreateSerializer
+        return OutfitSerializer
     
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         # Increment view count
         instance.views_count += 1
         instance.save(update_fields=['views_count'])
-        return super().retrieve(request, *args, **kwargs)
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'message': 'Outfit retrieved successfully',
+            'data': serializer.data
+        })
     
     @extend_schema(
         summary="Get outfit details",
@@ -152,7 +171,21 @@ class OutfitDetailView(generics.RetrieveUpdateDestroyAPIView):
         }
     )
     def put(self, request, *args, **kwargs):
-        return super().put(request, *args, **kwargs)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response({
+            'success': True,
+            'message': 'Outfit updated successfully',
+            'data': OutfitSerializer(instance, context={'request': request}).data
+        })
+    
+    def patch(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.put(request, *args, **kwargs)
     
     @extend_schema(
         summary="Delete outfit",

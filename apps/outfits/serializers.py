@@ -8,14 +8,30 @@ from .models import Outfit, OutfitItem, OutfitLike, OutfitSave
 class OutfitItemSerializer(serializers.ModelSerializer):
     """Serializer for OutfitItem model."""
     image = serializers.SerializerMethodField()
+    image_url = serializers.URLField(required=False, allow_blank=True, read_only=False)
     
     class Meta:
         model = OutfitItem
         fields = [
-            'id', 'item_type', 'name', 'brand', 'image', 'price', 'currency',
+            'id', 'item_type', 'name', 'brand', 'image', 'image_url', 'price', 'currency',
             'size', 'color', 'material', 'purchase_url', 'affiliate_link',
             'retailer', 'is_available', 'product_id'
         ]
+        extra_kwargs = {
+            'item_type': {'required': True},
+            'name': {'required': True},
+            'brand': {'required': False, 'allow_blank': True},
+            'price': {'required': False},
+            'currency': {'required': False},
+            'size': {'required': False, 'allow_blank': True},
+            'color': {'required': False, 'allow_blank': True},
+            'material': {'required': False, 'allow_blank': True},
+            'purchase_url': {'required': False, 'allow_blank': True},
+            'affiliate_link': {'required': False, 'allow_blank': True},
+            'retailer': {'required': False, 'allow_blank': True},
+            'is_available': {'required': False},
+            'product_id': {'required': False, 'allow_blank': True},
+        }
     
     def get_image(self, obj):
         """Return image URL from image_url field or ImageField as fallback."""
@@ -82,13 +98,38 @@ class OutfitSerializer(serializers.ModelSerializer):
 class OutfitCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating outfits with items."""
     items = OutfitItemSerializer(many=True, required=False)
+    main_image_url = serializers.URLField(required=False, allow_blank=True)
     
     class Meta:
         model = Outfit
         fields = [
-            'title', 'description', 'main_image', 'occasion', 'season',
+            'title', 'description', 'main_image', 'main_image_url', 'occasion', 'season',
             'style_tags', 'color_palette', 'is_public', 'items'
         ]
+        extra_kwargs = {
+            'title': {'required': True},
+            'description': {'required': False, 'allow_blank': True},
+            'main_image': {'required': False},
+            'occasion': {'required': False},
+            'season': {'required': False},
+            'style_tags': {'required': False},
+            'color_palette': {'required': False},
+            'is_public': {'required': False},
+        }
+    
+    def validate(self, data):
+        """Ensure at least occasion or season is provided, or set defaults."""
+        if 'occasion' not in data or not data.get('occasion'):
+            data['occasion'] = 'casual'  # Default
+        if 'season' not in data or not data.get('season'):
+            data['season'] = 'all'  # Default
+        if 'style_tags' not in data or not data.get('style_tags'):
+            data['style_tags'] = []
+        if 'color_palette' not in data or not data.get('color_palette'):
+            data['color_palette'] = []
+        if 'is_public' not in data:
+            data['is_public'] = True
+        return data
     
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])

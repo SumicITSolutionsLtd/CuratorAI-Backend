@@ -122,11 +122,36 @@ class LookbookSerializer(serializers.ModelSerializer):
 
 class LookbookCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating lookbooks."""
-    outfit_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+    outfit_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
+    cover_image_url = serializers.URLField(required=False, allow_blank=True)
     
     class Meta:
         model = Lookbook
-        fields = ['title', 'description', 'cover_image', 'season', 'occasion', 'style', 'tags', 'is_public', 'outfit_ids']
+        fields = ['title', 'description', 'cover_image', 'cover_image_url', 'season', 'occasion', 'style', 'tags', 'is_public', 'outfit_ids']
+        extra_kwargs = {
+            'title': {'required': True},
+            'description': {'required': True},
+            'cover_image': {'required': False},
+            'season': {'required': False},
+            'occasion': {'required': False},
+            'style': {'required': False},
+            'tags': {'required': False},
+            'is_public': {'required': False},
+        }
+    
+    def validate(self, data):
+        """Set defaults for optional fields."""
+        if 'season' not in data or not data.get('season'):
+            data['season'] = 'all'
+        if 'occasion' not in data or not data.get('occasion'):
+            data['occasion'] = 'casual'
+        if 'style' not in data or not data.get('style'):
+            data['style'] = []
+        if 'tags' not in data or not data.get('tags'):
+            data['tags'] = []
+        if 'is_public' not in data:
+            data['is_public'] = True
+        return data
     
     def create(self, validated_data):
         outfit_ids = validated_data.pop('outfit_ids', [])

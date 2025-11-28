@@ -76,6 +76,9 @@ class PostImage(models.Model):
     class Meta:
         db_table = 'post_images'
         ordering = ['order', 'created_at']
+        indexes = [
+            models.Index(fields=['post', 'order']),
+        ]
     
     def __str__(self):
         return f"Image for post {self.post.id}"

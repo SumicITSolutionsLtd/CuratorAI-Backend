@@ -107,4 +107,24 @@ class PostCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ['caption', 'tags', 'outfit_id', 'tagged_items', 'location_name', 'location_lat', 'location_lng', 'privacy']
+        extra_kwargs = {
+            'caption': {'required': True},
+            'tags': {'required': False},
+            'outfit_id': {'required': False},
+            'tagged_items': {'required': False},
+            'location_name': {'required': False, 'allow_blank': True},
+            'location_lat': {'required': False},
+            'location_lng': {'required': False},
+            'privacy': {'required': False},
+        }
+    
+    def validate(self, data):
+        """Set defaults for optional fields."""
+        if 'tags' not in data or not data.get('tags'):
+            data['tags'] = []
+        if 'tagged_items' not in data or not data.get('tagged_items'):
+            data['tagged_items'] = []
+        if 'privacy' not in data or not data.get('privacy'):
+            data['privacy'] = 'public'
+        return data
 
