@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test Dashboard - CuratorAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            color: #1a1a1a;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #7f8c8d;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            color: #2c3e50;
+        }
+        
+        .tab.active {
+            color: #ef4444;
+            border-bottom-color: #ef4444;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .status-bar {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        /* Endpoint Testing Styles */
+        .endpoint-tester {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .endpoint-form {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        input, select, textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .endpoint-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .endpoint-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .endpoint-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .endpoint-item.selected {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .endpoint-method {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .method-get { background: #61affe; color: white; }
+        .method-post { background: #49cc90; color: white; }
+        .method-put { background: #fca130; color: white; }
+        .method-patch { background: #50e3c2; color: white; }
+        .method-delete { background: #f93e3e; color: white; }
+        
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #2c3e50;
+        }
+        
+        .endpoint-category {
+            font-size: 11px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        
+        .results-section {
+            margin-top: 30px;
+        }
+        
+        .result-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .result-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .result-content {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .json-viewer {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .summary-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .summary-box h4 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .summary-box p {
+            margin: 5px 0;
+            color: #495057;
+        }
+        
+        .log-entry {
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .log-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .log-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .log-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .test-modules {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .module-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .module-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .module-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .test-list {
+            list-style: none;
+        }
+        
+        .test-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .test-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        
+        .test-name {
+            font-size: 14px;
+            color: #495057;
+        }
+        
+        .test-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dee2e6;
+        }
+        
+        .test-status.passed {
+            background: #27ae60;
+        }
+        
+        .test-status.failed {
+            background: #e74c3c;
+        }
+        
+        .test-status.running {
+            background: #3498db;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .results-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .results-panel.active {
+            display: block;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .results-content {
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .summary-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <header class="header" style="background: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95);">
+        <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+            <a href="/" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.5rem; font-weight: 700; color: #1a1a1a; text-decoration: none;">
+                <div style="width: 32px; height: 32px; background: #1a1a1a; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">C</div>
+                <span>CuratorAI</span>
+            </a>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <a href="/api/schema/swagger-ui/" class="btn-link" target="_blank" style="color: #4b5563; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; transition: color 0.2s;">Documentation</a>
+                <a href="/admin/" class="btn-link" target="_blank" style="color: #4b5563; text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; transition: color 0.2s;">Admin</a>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="display: inline-block; background: #ef4444; color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; margin-bottom: 1rem;">🧪 API Test Dashboard</div>
+            <h1 style="font-size: 2.5rem; font-weight: 800; color: #1a1a1a; margin-bottom: 0.5rem;">Test API Endpoints</h1>
+            <p style="font-size: 1.125rem; color: #6b7280;">Test API endpoints and run automated tests</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('endpoints')">🔌 Endpoint Testing</button>
+            <button class="tab" onclick="switchTab('tests')">🧪 Automated Tests</button>
+        </div>
+        
+        <!-- Endpoint Testing Tab -->
+        <div id="endpoints-tab" class="tab-content active">
+            <div class="endpoint-tester">
+                <h2>Test API Endpoints</h2>
+                <p style="color: #7f8c8d; margin-bottom: 20px;">
+                    Select an endpoint from the list below or enter a custom path. Configure your request and see detailed results.
+                </p>
+                
+                <div class="endpoint-form">
+                    <div class="form-group">
+                        <label>Select Endpoint</label>
+                        <div class="endpoint-list" id="endpoint-list">
+                            <div style="padding: 20px; text-align: center; color: #7f8c8d;">
+                                <div class="loading"></div> Loading endpoints...
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>HTTP Method</label>
+                        <select id="method-select">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="PATCH">PATCH</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>Endpoint Path</label>
+                        <input type="text" id="endpoint-path" placeholder="/api/v1/auth/me/" value="/api/v1/auth/me/">
+                        <span class="help-text">Enter the full API path (e.g., /api/v1/auth/me/)</span>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>Request Body (JSON)</label>
+                        <textarea id="request-body" placeholder='{"key": "value"}'></textarea>
+                        <span class="help-text">Enter JSON data for POST, PUT, or PATCH requests</span>
+                        <button type="button" class="btn-secondary" onclick="loadExampleBody()" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;">
+                            📋 Load Example
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Authentication Token</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="auth-token" placeholder="Bearer token (optional)" style="flex: 1;">
+                            <button type="button" class="btn-secondary" onclick="generateTestToken()" style="padding: 10px 15px; font-size: 12px; white-space: nowrap;">
+                                🔑 Get Token
+                            </button>
+                        </div>
+                        <span class="help-text">JWT token for authenticated endpoints. Click "Get Token" to auto-generate.</span>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <button class="btn-primary" onclick="testEndpoint()" style="width: 100%; padding: 15px; font-size: 16px;">
+                            🚀 Test Endpoint
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="endpoint-results" class="results-section" style="display: none;">
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">📊 Summary</div>
+                        </div>
+                        <div id="summary-content"></div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">📤 Request Details</div>
+                        </div>
+                        <div class="result-content">
+                            <pre id="request-details" class="json-viewer"></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">📥 Response Details</div>
+                        </div>
+                        <div class="result-content">
+                            <pre id="response-details" class="json-viewer"></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-title">📝 Logs & Debug Info</div>
+                        </div>
+                        <div id="logs-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Automated Tests Tab -->
+        <div id="tests-tab" class="tab-content">
+            <div class="status-bar">
+                <div class="status-item">
+                    <span>Status:</span>
+                    <span id="status" class="status-badge badge-info">Ready</span>
+                </div>
+                <div class="status-item">
+                    <span>Total Tests:</span>
+                    <span id="total-tests">{{ total_tests }}</span>
+                </div>
+                <div class="status-item">
+                    <span>Last Run:</span>
+                    <span id="last-run">Never</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn-primary" onclick="runAllTests()">▶ Run All Tests</button>
+                <button class="btn-success" onclick="refreshTestList()">🔄 Refresh</button>
+                <button class="btn-secondary" onclick="clearResults()">🗑️ Clear Results</button>
+            </div>
+            
+            <div id="summary" class="summary" style="display: none;">
+                <div class="summary-card">
+                    <div class="summary-number" id="summary-passed" style="color: #27ae60;">0</div>
+                    <div class="summary-label">Passed</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-number" id="summary-failed" style="color: #e74c3c;">0</div>
+                    <div class="summary-label">Failed</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-number" id="summary-skipped" style="color: #f39c12;">0</div>
+                    <div class="summary-label">Skipped</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-number" id="summary-total" style="color: #3498db;">0</div>
+                    <div class="summary-label">Total</div>
+                </div>
+            </div>
+            
+            <div class="test-modules">
+                {% for module, tests in tests_by_module.items %}
+                <div class="module-card">
+                    <div class="module-header">
+                        <div class="module-title">{{ module|title }}</div>
+                        <button class="btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="runModuleTests('{{ module }}')">Run Module</button>
+                    </div>
+                    <ul class="test-list">
+                        {% for test in tests %}
+                        <li class="test-item" onclick="runSingleTest('{{ test.path }}')">
+                            <span class="test-name">{{ test.file }}</span>
+                            <span class="test-status" id="status-{{ test.path|slugify }}"></span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div id="results-panel" class="results-panel">
+                <div class="results-header">
+                    <h3>Test Results</h3>
+                    <button class="btn-secondary" onclick="closeResults()">Close</button>
+                </div>
+                <div id="results-content" class="results-content"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let isRunning = false;
+        let endpoints = [];
+        
+        // Tab switching - must be in global scope for onclick handlers
+        window.switchTab = function(tabName) {
+            try {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                if (tabName === 'endpoints') {
+                    const firstTab = document.querySelector('.tab:first-child');
+                    const endpointsTab = document.getElementById('endpoints-tab');
+                    if (firstTab) firstTab.classList.add('active');
+                    if (endpointsTab) {
+                        endpointsTab.classList.add('active');
+                        loadEndpoints();
+                    }
+                } else {
+                    const lastTab = document.querySelector('.tab:last-child');
+                    const testsTab = document.getElementById('tests-tab');
+                    if (lastTab) lastTab.classList.add('active');
+                    if (testsTab) testsTab.classList.add('active');
+                }
+            } catch (error) {
+                console.error('Error switching tab:', error);
+            }
+        };
+        
+        // Load endpoints - make globally accessible
+        window.loadEndpoints = async function() {
+            const listEl = document.getElementById('endpoint-list');
+            if (!listEl) {
+                console.error('endpoint-list element not found');
+                return;
+            }
+            
+            listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;"><div class="loading"></div> Loading endpoints...</div>';
+            
+            try {
+                // Add timeout to prevent infinite loading
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch('/test-dashboard/api/endpoints/', {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                endpoints = data.endpoints || [];
+                
+                if (endpoints.length === 0) {
+                    listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">No endpoints found. The API might not be configured correctly.</div>';
+                    return;
+                }
+                
+                if (typeof window.renderEndpoints === 'function') {
+                    window.renderEndpoints();
+                } else {
+                    console.error('renderEndpoints function not found');
+                    listEl.innerHTML = '<div style="padding: 20px; color: #e74c3c;">Error: renderEndpoints function not available</div>';
+                }
+            } catch (error) {
+                console.error('Error loading endpoints:', error);
+                let errorMsg = error.message;
+                if (error.name === 'AbortError') {
+                    errorMsg = 'Request timed out. The server may be slow or unresponsive.';
+                }
+                listEl.innerHTML = 
+                    '<div style="padding: 20px; color: #e74c3c;">Error loading endpoints: ' + errorMsg + '<br><button onclick="window.loadEndpoints()" style="margin-top: 10px; padding: 5px 10px; cursor: pointer;">Retry</button></div>';
+            }
+        };
+        
+        window.renderEndpoints = function() {
+            const listEl = document.getElementById('endpoint-list');
+            if (endpoints.length === 0) {
+                listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">No endpoints found</div>';
+                return;
+            }
+            
+            // Group by category, then by path (combining methods)
+            const byCategory = {};
+            endpoints.forEach(ep => {
+                const cat = ep.category || 'Other';
+                if (!byCategory[cat]) byCategory[cat] = {};
+                const path = ep.path;
+                if (!byCategory[cat][path]) {
+                    byCategory[cat][path] = {
+                        path: path,
+                        methods: [],
+                        description: ep.description || ''
+                    };
+                }
+                // Add methods if not already present
+                const methods = ep.methods || ['GET'];
+                methods.forEach(method => {
+                    if (!byCategory[cat][path].methods.includes(method)) {
+                        byCategory[cat][path].methods.push(method);
+                    }
+                });
+            });
+            
+            let html = '';
+            Object.keys(byCategory).sort().forEach(category => {
+                html += `<div style="padding: 10px; background: #f8f9fa; font-weight: 600; color: #2c3e50; position: sticky; top: 0; z-index: 10;">${category}</div>`;
+                const categoryEndpoints = Object.values(byCategory[category]);
+                categoryEndpoints.sort((a, b) => a.path.localeCompare(b.path));
+                categoryEndpoints.forEach(ep => {
+                    const methods = ep.methods.sort();
+                    const methodBadges = methods.map(m => 
+                        `<span class="endpoint-method method-${m.toLowerCase()}">${m}</span>`
+                    ).join(' ');
+                    html += `
+                        <div class="endpoint-item" onclick="selectEndpoint('${ep.path}', '${methods[0]}')" title="Click to select. Available methods: ${methods.join(', ')}">
+                            <div>
+                                ${methodBadges}
+                                <span class="endpoint-path">${ep.path}</span>
+                            </div>
+                            ${ep.description ? `<div class="endpoint-category">${ep.description}</div>` : ''}
+                        </div>
+                    `;
+                });
+            });
+            
+            listEl.innerHTML = html;
+        }
+        
+        window.selectEndpoint = function(path, method) {
+            try {
+                const pathInput = document.getElementById('endpoint-path');
+                const methodSelect = document.getElementById('method-select');
+                
+                if (pathInput) pathInput.value = path;
+                if (methodSelect) methodSelect.value = method;
+                
+                // Remove selected class from all items
+                document.querySelectorAll('.endpoint-item').forEach(el => el.classList.remove('selected'));
+                
+                // Add selected class to clicked item
+                if (event && event.currentTarget) {
+                    event.currentTarget.classList.add('selected');
+                }
+                
+                // Auto-populate request body and token immediately
+                // Call directly first, then also with timeout as backup
+                autoPopulateEndpoint(path, method);
+                setTimeout(() => {
+                    autoPopulateEndpoint(path, method);
+                }, 50);
+            } catch (error) {
+                console.error('Error selecting endpoint:', error);
+            }
+        };
+        
+        async function autoPopulateEndpoint(path, method) {
+            // Auto-populate request body immediately with path and method
+            if (typeof window.loadExampleBody === 'function') {
+                // Pass path and method directly to avoid DOM timing issues
+                window.loadExampleBody(path, method);
+            } else {
+                console.error('loadExampleBody function not found');
+            }
+            
+            // Auto-generate token for authenticated endpoints (don't await, run in background)
+            if (needsAuth(path)) {
+                window.generateTestToken().catch(err => {
+                    console.log('Token generation failed (non-critical):', err);
+                });
+            }
+        }
+        
+        function needsAuth(path) {
+            // Endpoints that typically need auth
+            const authEndpoints = [
+                '/api/v1/auth/me/',
+                '/api/v1/auth/delete/',
+                '/api/v1/social/posts/',
+                '/api/v1/lookbooks/create/',
+                '/api/v1/outfits/',
+                '/api/v1/wardrobe/',
+                '/api/v1/cart/',
+                '/api/v1/notifications/'
+            ];
+            return authEndpoints.some(ep => path.includes(ep) || path.startsWith(ep));
+        }
+        
+        window.generateTestToken = async function() {
+            try {
+                const response = await fetch('/test-dashboard/api/create-test-user/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success && data.tokens) {
+                    const tokenField = document.getElementById('auth-token');
+                    const userIdField = document.getElementById('user-id');
+                    if (tokenField) tokenField.value = data.tokens.access;
+                    // Also populate user ID
+                    if (data.user && data.user.id && userIdField) {
+                        userIdField.value = data.user.id;
+                    }
+                } else {
+                    alert('Failed to generate token: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error generating token:', error);
+                alert('Error generating token: ' + error.message);
+            }
+        };
+        
+        window.loadExampleBody = function(pathParam, methodParam) {
+            // Get values from parameters or DOM
+            const pathInput = document.getElementById('endpoint-path');
+            const methodSelect = document.getElementById('method-select');
+            const bodyField = document.getElementById('request-body');
+            
+            if (!bodyField) {
+                console.error('request-body element not found');
+                return;
+            }
+            
+            const path = pathParam || (pathInput ? pathInput.value.trim() : '');
+            const method = methodParam || (methodSelect ? methodSelect.value : 'GET');
+            
+            if (!path) {
+                console.log('No path provided');
+                return;
+            }
+            
+            // Normalize path - remove trailing slash for matching
+            const normalizePath = (p) => p.replace(/\/$/, '') || p;
+            const normalizedPath = normalizePath(path);
+            
+            // Comprehensive example request bodies for all endpoints
+            const examples = {
+                '/api/v1/auth/login/': {
+                    'POST': JSON.stringify({
+                        "email": "test@example.com",
+                        "password": "testpass123"
+                    }, null, 2)
+                },
+                '/api/v1/auth/register/': {
+                    'POST': JSON.stringify({
+                        "email": "newuser@example.com",
+                        "username": "newuser",
+                        "password": "securepass123",
+                        "password2": "securepass123",
+                        "first_name": "New",
+                        "last_name": "User",
+                        "terms_and_conditions_accepted": true
+                    }, null, 2)
+                },
+                '/api/v1/auth/me/': {
+                    'GET': '',
+                    'PUT': JSON.stringify({
+                        "first_name": "Updated",
+                        "last_name": "Name",
+                        "bio": "Updated bio"
+                    }, null, 2),
+                    'PATCH': JSON.stringify({
+                        "first_name": "Updated"
+                    }, null, 2)
+                },
+                '/api/v1/auth/refresh/': {
+                    'POST': JSON.stringify({
+                        "refresh": "your_refresh_token_here"
+                    }, null, 2)
+                },
+                '/api/v1/social/posts/': {
+                    'POST': JSON.stringify({
+                        "caption": "Check out my new outfit!",
+                        "tags": ["fashion", "outfit"],
+                        "privacy": "public"
+                    }, null, 2)
+                },
+                '/api/v1/social/feed/': {
+                    'GET': ''
+                },
+                '/api/v1/lookbooks/create/': {
+                    'POST': JSON.stringify({
+                        "title": "Summer Collection",
+                        "description": "My favorite summer looks",
+                        "season": "summer",
+                        "occasion": "casual",
+                        "is_public": true
+                    }, null, 2)
+                },
+                '/api/v1/lookbooks/': {
+                    'GET': ''
+                },
+                '/api/v1/outfits/': {
+                    'GET': '',
+                    'POST': JSON.stringify({
+                        "name": "Casual Outfit",
+                        "description": "A casual everyday outfit",
+                        "is_public": true
+                    }, null, 2)
+                }
+            };
+            
+            // Convert examples to use normalized paths and store as objects
+            // (normalizePath already declared above)
+            const normalizedExamples = {};
+            for (const [examplePath, methods] of Object.entries(examples)) {
+                const normPath = normalizePath(examplePath);
+                normalizedExamples[normPath] = {};
+                for (const [m, value] of Object.entries(methods)) {
+                    if (typeof value === 'string' && value !== '') {
+                        // Parse the JSON string back to object
+                        try {
+                            normalizedExamples[normPath][m] = JSON.parse(value);
+                        } catch {
+                            normalizedExamples[normPath][m] = null;
+                        }
+                    } else {
+                        normalizedExamples[normPath][m] = null;
+                    }
+                }
+            }
+            
+            // Try exact match first (normalized)
+            if (normalizedExamples[normalizedPath] && normalizedExamples[normalizedPath][method] !== undefined) {
+                const example = normalizedExamples[normalizedPath][method];
+                if (example === null) {
+                    bodyField.value = '';
+                } else {
+                    bodyField.value = JSON.stringify(example, null, 2);
+                }
+                return;
+            }
+            
+            // Try path prefix match (for endpoints with parameters like /api/v1/posts/123)
+            for (const [examplePath, methods] of Object.entries(normalizedExamples)) {
+                if (normalizedPath.startsWith(examplePath) && methods[method] !== undefined) {
+                    const example = methods[method];
+                    if (example === null) {
+                        bodyField.value = '';
+                    } else {
+                        bodyField.value = JSON.stringify(example, null, 2);
+                    }
+                    return;
+                }
+            }
+            
+            // Comprehensive pattern-based matching for all endpoint types
+            const lowerPath = normalizedPath.toLowerCase();
+            
+            // POST requests
+            if (method === 'POST') {
+                // Authentication endpoints
+                if (lowerPath.includes('/login')) {
+                    bodyField.value = JSON.stringify({
+                        "email": "test@example.com",
+                        "password": "testpass123"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/register')) {
+                    bodyField.value = JSON.stringify({
+                        "email": "newuser@example.com",
+                        "username": "newuser",
+                        "password": "securepass123",
+                        "password2": "securepass123",
+                        "first_name": "New",
+                        "last_name": "User",
+                        "terms_and_conditions_accepted": true
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/refresh')) {
+                    bodyField.value = JSON.stringify({
+                        "refresh": "your_refresh_token_here"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/password-reset/request')) {
+                    bodyField.value = JSON.stringify({
+                        "email": "user@example.com"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/password-reset/confirm')) {
+                    bodyField.value = JSON.stringify({
+                        "email": "user@example.com",
+                        "code": "123456",
+                        "new_password": "newpass123",
+                        "new_password2": "newpass123"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/verify-email/request')) {
+                    bodyField.value = JSON.stringify({
+                        "email": "user@example.com"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/verify-email/confirm')) {
+                    bodyField.value = JSON.stringify({
+                        "email": "user@example.com",
+                        "code": "123456"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/register/complete')) {
+                    bodyField.value = JSON.stringify({
+                        "style_preferences": {
+                            "favorite_colors": ["blue", "black"],
+                            "favorite_brands": ["Nike", "Adidas"],
+                            "style_type": "casual"
+                        }
+                    }, null, 2);
+                    return;
+                }
+                
+                // Social endpoints
+                if (lowerPath.includes('/social/posts') && !lowerPath.includes('/posts/')) {
+                    bodyField.value = JSON.stringify({
+                        "caption": "Check out my new outfit!",
+                        "tags": ["fashion", "outfit"],
+                        "privacy": "public"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/posts/') && lowerPath.includes('/comments/add')) {
+                    bodyField.value = JSON.stringify({
+                        "content": "Great outfit!",
+                        "parent_id": null
+                    }, null, 2);
+                    return;
+                }
+                
+                // Lookbooks
+                if (lowerPath.includes('/lookbooks/create') || (lowerPath.includes('/lookbook') && lowerPath.includes('/create'))) {
+                    bodyField.value = JSON.stringify({
+                        "title": "Summer Collection",
+                        "description": "My favorite summer looks",
+                        "season": "summer",
+                        "occasion": "casual",
+                        "is_public": true
+                    }, null, 2);
+                    return;
+                }
+                
+                // Outfits
+                if (lowerPath.includes('/outfits') && !lowerPath.includes('/outfits/')) {
+                    bodyField.value = JSON.stringify({
+                        "name": "Casual Outfit",
+                        "description": "A casual everyday outfit",
+                        "is_public": true,
+                        "items": []
+                    }, null, 2);
+                    return;
+                }
+                
+                // Wardrobe
+                if (lowerPath.includes('/wardrobe/items/create') || (lowerPath.includes('/wardrobe') && lowerPath.includes('/create'))) {
+                    bodyField.value = JSON.stringify({
+                        "name": "Blue Jeans",
+                        "category": "pants",
+                        "brand": "Levi's",
+                        "color": "blue",
+                        "size": "M",
+                        "purchase_date": "2024-01-15",
+                        "price": 79.99
+                    }, null, 2);
+                    return;
+                }
+                
+                // Cart
+                if (lowerPath.includes('/cart/items') && !lowerPath.includes('/items/')) {
+                    bodyField.value = JSON.stringify({
+                        "product_id": 1,
+                        "quantity": 2,
+                        "size": "M",
+                        "color": "blue"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/cart/promo')) {
+                    bodyField.value = JSON.stringify({
+                        "code": "SAVE20"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/cart/shipping/calculate')) {
+                    bodyField.value = JSON.stringify({
+                        "address": {
+                            "street": "123 Main St",
+                            "city": "New York",
+                            "state": "NY",
+                            "zip": "10001",
+                            "country": "US"
+                        }
+                    }, null, 2);
+                    return;
+                }
+                
+                // Generic POST fallback
+                bodyField.value = JSON.stringify({
+                    "example": "value",
+                    "data": "sample data"
+                }, null, 2);
+                return;
+            }
+            
+            // PUT/PATCH requests
+            if (method === 'PUT' || method === 'PATCH') {
+                if (lowerPath.includes('/auth/me')) {
+                    bodyField.value = JSON.stringify({
+                        "first_name": "Updated",
+                        "last_name": "Name",
+                        "bio": "Updated bio",
+                        "avatar": null
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/lookbooks/') && lowerPath.includes('/update')) {
+                    bodyField.value = JSON.stringify({
+                        "title": "Updated Title",
+                        "description": "Updated description",
+                        "is_public": false
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/posts/') && lowerPath.includes('/update')) {
+                    bodyField.value = JSON.stringify({
+                        "caption": "Updated caption",
+                        "privacy": "private"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/outfits/') && !lowerPath.includes('/like') && !lowerPath.includes('/save')) {
+                    bodyField.value = JSON.stringify({
+                        "name": "Updated Outfit",
+                        "description": "Updated description"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/wardrobe/items/') && lowerPath.includes('/update')) {
+                    bodyField.value = JSON.stringify({
+                        "name": "Updated Item",
+                        "category": "tops"
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/cart/items/') && !lowerPath.includes('/remove')) {
+                    bodyField.value = JSON.stringify({
+                        "quantity": 3
+                    }, null, 2);
+                    return;
+                }
+                if (lowerPath.includes('/notifications/') && lowerPath.includes('/preferences')) {
+                    bodyField.value = JSON.stringify({
+                        "email_notifications": true,
+                        "push_notifications": false
+                    }, null, 2);
+                    return;
+                }
+                
+                // Generic PUT/PATCH fallback
+                bodyField.value = JSON.stringify({
+                    "field1": "updated_value",
+                    "field2": "another_value"
+                }, null, 2);
+                return;
+            }
+            
+            // For GET/HEAD/DELETE requests, leave empty
+            if (['GET', 'HEAD', 'DELETE'].includes(method)) {
+                bodyField.value = '';
+                return;
+            }
+            
+            // Fallback - empty
+            bodyField.value = '';
+        }
+        
+        // Test endpoint
+        window.testEndpoint = async function() {
+            if (isRunning) return;
+            isRunning = true;
+            
+            // Get form elements safely
+            const methodSelect = document.getElementById('method-select');
+            const pathInput = document.getElementById('endpoint-path');
+            const bodyField = document.getElementById('request-body');
+            const authTokenField = document.getElementById('auth-token');
+            const userIdField = document.getElementById('user-id');
+            const testButton = event ? event.target : document.querySelector('button[onclick*="testEndpoint"]');
+            const resultsSection = document.getElementById('endpoint-results');
+            
+            if (!methodSelect || !pathInput) {
+                alert('Required form fields not found');
+                isRunning = false;
+                return;
+            }
+            
+            const method = methodSelect.value;
+            const path = pathInput.value.trim();
+            const bodyText = bodyField ? bodyField.value.trim() : '';
+            const authToken = authTokenField ? authTokenField.value.trim() : '';
+            const userId = userIdField ? userIdField.value.trim() : '';
+            
+            if (!path) {
+                alert('Please enter an endpoint path');
+                isRunning = false;
+                return;
+            }
+            
+            // Show loading state
+            if (testButton) {
+                testButton.disabled = true;
+                testButton.textContent = '⏳ Testing...';
+            }
+            
+            // Show results section
+            if (resultsSection) {
+                resultsSection.style.display = 'block';
+                // Keep the structure but show loading
+                const summaryContent = document.getElementById('summary-content');
+                const requestDetails = document.getElementById('request-details');
+                const responseDetails = document.getElementById('response-details');
+                const logsContent = document.getElementById('logs-content');
+                
+                if (summaryContent) summaryContent.innerHTML = '<div style="padding: 20px; text-align: center;"><div class="loading"></div> Testing endpoint...</div>';
+                if (requestDetails) requestDetails.textContent = 'Loading...';
+                if (responseDetails) responseDetails.textContent = 'Loading...';
+                if (logsContent) logsContent.innerHTML = '<div class="log-entry log-info">Preparing request...</div>';
+            } else {
+                console.error('Results section not found');
+            }
+            
+            let requestData = {};
+            if (bodyText) {
+                try {
+                    requestData = JSON.parse(bodyText);
+                } catch (e) {
+                    alert('Invalid JSON in request body: ' + e.message);
+                    if (testButton) {
+                        testButton.disabled = false;
+                        testButton.textContent = '🚀 Test Endpoint';
+                    }
+                    isRunning = false;
+                    return;
+                }
+            }
+            
+            try {
+                const response = await fetch('/test-dashboard/api/test-endpoint/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        method: method,
+                        path: path,
+                        data: requestData,
+                        auth_token: authToken,
+                        user_id: userId ? parseInt(userId) : null
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                displayEndpointResults(result);
+            } catch (error) {
+                console.error('Error testing endpoint:', error);
+                if (resultsSection) {
+                    resultsSection.innerHTML = `
+                        <div class="result-card">
+                            <div class="result-header">
+                                <div class="result-title">❌ Error</div>
+                            </div>
+                            <div class="result-content">
+                                <pre>Error: ${error.message}\n\nPlease check the console for more details.</pre>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    alert('Error testing endpoint: ' + error.message);
+                }
+            } finally {
+                isRunning = false;
+                if (testButton) {
+                    testButton.disabled = false;
+                    testButton.textContent = '🚀 Test Endpoint';
+                }
+            }
+        }
+        
+        window.displayEndpointResults = function(result) {
+            const resultsSection = document.getElementById('endpoint-results');
+            if (!resultsSection) {
+                console.error('endpoint-results section not found');
+                alert('Results section not found. Please refresh the page.');
+                return;
+            }
+            
+            resultsSection.style.display = 'block';
+            
+            // Summary
+            const summary = result.summary || {};
+            const response = result.response || {};
+            const statusCode = response.status_code || 0;
+            
+            // Enhance summary with response details
+            let frontendSummary = summary.for_frontend || 'No summary available';
+            let backendSummary = summary.for_backend || 'No summary available';
+            
+            // Add helpful hints for common errors
+            if (statusCode === 400) {
+                const errorData = response.data || response.parsed_content || {};
+                if (errorData.details || errorData.error) {
+                    frontendSummary += `\n\n💡 Tip: Check the "Response Details" section below to see what fields are missing or invalid.`;
+                    backendSummary += `\n\nValidation errors: ${JSON.stringify(errorData.details || errorData.error, null, 2)}`;
+                } else {
+                    frontendSummary += `\n\n💡 Tip: This endpoint likely requires specific data in the request body. Check the API documentation or try adding required fields.`;
+                }
+            } else if (statusCode === 401) {
+                frontendSummary += `\n\n💡 Tip: This endpoint requires authentication. Add a JWT token in the "Authentication Token" field above.`;
+                backendSummary += `\n\nAuthentication required. Provide a valid JWT token in the Authorization header.`;
+            } else if (statusCode === 404) {
+                frontendSummary += `\n\n💡 Tip: The endpoint path might be incorrect, or the resource doesn't exist. Check the URL path.`;
+                backendSummary += `\n\nEndpoint not found. Verify the URL path is correct.`;
+            }
+            
+            let summaryHtml = `
+                <div class="summary-box">
+                    <h4>👤 For Frontend Developers</h4>
+                    <p style="white-space: pre-wrap;">${frontendSummary}</p>
+                </div>
+                <div class="summary-box">
+                    <h4>⚙️ For Backend Developers</h4>
+                    <p style="white-space: pre-wrap;">${backendSummary}</p>
+                </div>
+                <div class="summary-box">
+                    <h4>📖 For Everyone</h4>
+                    <p>${summary.for_layman || 'No summary available'}</p>
+                </div>
+            `;
+            document.getElementById('summary-content').innerHTML = summaryHtml;
+            
+            // Request
+            document.getElementById('request-details').textContent = JSON.stringify(result.request || {}, null, 2);
+            
+            // Response (reuse response variable from above)
+            let responseText = `Status: ${response.status_code || 'N/A'} ${response.status_text || ''}\n\n`;
+            responseText += `Headers:\n${JSON.stringify(response.headers || {}, null, 2)}\n\n`;
+            
+            // Try to get the best response data
+            let responseBody = response.data || response.parsed_content || {};
+            if (!responseBody || (typeof responseBody === 'object' && Object.keys(responseBody).length === 0)) {
+                // Try to parse content as JSON
+                if (response.content) {
+                    try {
+                        const parsed = JSON.parse(response.content);
+                        if (parsed && typeof parsed === 'object') {
+                            responseBody = parsed;
+                        } else {
+                            responseBody = response.content;
+                        }
+                    } catch {
+                        // If it's HTML, show a note
+                        if (response.content.includes('<html') || response.content.includes('<body')) {
+                            responseBody = {
+                                'note': 'Response is HTML (likely an error page)',
+                                'preview': response.content.substring(0, 200) + '...'
+                            };
+                        } else {
+                            responseBody = response.content;
+                        }
+                    }
+                }
+            }
+            
+            // Format response body nicely
+            if (typeof responseBody === 'object' && responseBody !== null) {
+                responseText += `Body (JSON):\n${JSON.stringify(responseBody, null, 2)}`;
+            } else {
+                responseText += `Body:\n${responseBody}`;
+            }
+            
+            if (response.error) {
+                responseText += `\n\nError:\n${response.error}`;
+                if (response.traceback) {
+                    responseText += `\n\nTraceback:\n${response.traceback}`;
+                }
+            }
+            
+            // Add helpful notes for common status codes
+            if (response.status_code === 400 && responseBody && typeof responseBody === 'object') {
+                if (responseBody.details || responseBody.error) {
+                    responseText += `\n\n⚠️ Validation Errors Detected:\n`;
+                    responseText += `Check the 'details' or 'error' field above for specific field validation errors.`;
+                }
+            }
+            
+            document.getElementById('response-details').textContent = responseText;
+            
+            // Logs
+            let logsHtml = '';
+            if (result.logs && result.logs.length > 0) {
+                result.logs.forEach(log => {
+                    logsHtml += `<div class="log-entry log-${log.level}">[${log.timestamp}] ${log.level.toUpperCase()}: ${log.message}</div>`;
+                });
+            }
+            if (result.stdout) {
+                logsHtml += `<div class="log-entry log-info"><strong>Standard Output:</strong><br><pre style="margin-top: 5px;">${result.stdout}</pre></div>`;
+            }
+            if (result.stderr) {
+                logsHtml += `<div class="log-entry log-error"><strong>Standard Error:</strong><br><pre style="margin-top: 5px;">${result.stderr}</pre></div>`;
+            }
+            document.getElementById('logs-content').innerHTML = logsHtml || '<p style="color: #7f8c8d;">No logs available</p>';
+            
+            // Scroll to results
+            // Scroll to results
+            setTimeout(() => {
+                const resultsSection = document.getElementById('endpoint-results');
+                if (resultsSection) {
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
+        
+        // Original test functions
+        function updateStatus(text, type = 'info') {
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = text;
+                statusEl.className = 'status-badge badge-' + type;
+            }
+        }
+        
+        function updateTestStatus(testPath, status) {
+            const statusEl = document.getElementById('status-' + testPath.replace(/\//g, '-').replace(/\./g, '-'));
+            if (statusEl) {
+                statusEl.className = 'test-status ' + status;
+            }
+        }
+        
+        function showResults(content) {
+            const panel = document.getElementById('results-panel');
+            const contentEl = document.getElementById('results-content');
+            if (panel && contentEl) {
+                contentEl.textContent = content;
+                panel.classList.add('active');
+            }
+        }
+        
+        window.closeResults = function() {
+            const panel = document.getElementById('results-panel');
+            if (panel) {
+                panel.classList.remove('active');
+            }
+        };
+        
+        window.clearResults = function() {
+            document.querySelectorAll('.test-status').forEach(el => {
+                el.className = 'test-status';
+            });
+            closeResults();
+            updateStatus('Ready', 'info');
+            const summary = document.getElementById('summary');
+            if (summary) {
+                summary.style.display = 'none';
+            }
+        };
+        
+        function updateSummary(summary) {
+            const summaryEl = document.getElementById('summary');
+            if (summaryEl) {
+                summaryEl.style.display = 'grid';
+                const passed = document.getElementById('summary-passed');
+                const failed = document.getElementById('summary-failed');
+                const skipped = document.getElementById('summary-skipped');
+                const total = document.getElementById('summary-total');
+                if (passed) passed.textContent = summary.passed || 0;
+                if (failed) failed.textContent = summary.failed || 0;
+                if (skipped) skipped.textContent = summary.skipped || 0;
+                if (total) total.textContent = summary.total || 0;
+            }
+        }
+        
+        window.runAllTests = async function() {
+            if (isRunning) return;
+            isRunning = true;
+            updateStatus('Running all tests...', 'warning');
+            document.querySelectorAll('.test-status').forEach(el => {
+                el.className = 'test-status running';
+            });
+            
+            try {
+                const response = await fetch('/test-dashboard/api/run-all/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus('All tests passed!', 'success');
+                    showResults(data.stdout || JSON.stringify(data, null, 2));
+                    if (data.summary) {
+                        updateSummary(data.summary);
+                    }
+                } else {
+                    updateStatus('Some tests failed', 'danger');
+                    showResults((data.stdout || '') + '\n\n' + (data.stderr || '') + '\n\n' + JSON.stringify(data, null, 2));
+                    if (data.summary) {
+                        updateSummary(data.summary);
+                    }
+                }
+                
+                const lastRun = document.getElementById('last-run');
+                if (lastRun) {
+                    lastRun.textContent = new Date().toLocaleString();
+                }
+            } catch (error) {
+                updateStatus('Error running tests', 'danger');
+                showResults('Error: ' + error.message);
+            } finally {
+                isRunning = false;
+            }
+        }
+        
+        window.runModuleTests = async function(module) {
+            if (isRunning) return;
+            isRunning = true;
+            updateStatus(`Running ${module} tests...`, 'warning');
+            
+            try {
+                const response = await fetch('/test-dashboard/api/run-module/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ module: module })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus(`${module} tests passed!`, 'success');
+                    showResults(data.stdout || JSON.stringify(data, null, 2));
+                    if (data.summary) {
+                        updateSummary(data.summary);
+                    }
+                } else {
+                    updateStatus(`${module} tests failed`, 'danger');
+                    showResults((data.stdout || '') + '\n\n' + (data.stderr || '') + '\n\n' + JSON.stringify(data, null, 2));
+                    if (data.summary) {
+                        updateSummary(data.summary);
+                    }
+                }
+            } catch (error) {
+                updateStatus('Error running tests', 'danger');
+                showResults('Error: ' + error.message);
+            } finally {
+                isRunning = false;
+            }
+        }
+        
+        window.runSingleTest = async function(testPath) {
+            if (isRunning) return;
+            isRunning = true;
+            updateTestStatus(testPath, 'running');
+            updateStatus('Running test...', 'warning');
+            
+            try {
+                const response = await fetch('/test-dashboard/api/run-test/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ test_path: testPath })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateTestStatus(testPath, 'passed');
+                    updateStatus('Test passed!', 'success');
+                    showResults(data.stdout || JSON.stringify(data, null, 2));
+                } else {
+                    updateTestStatus(testPath, 'failed');
+                    updateStatus('Test failed', 'danger');
+                    showResults((data.stdout || '') + '\n\n' + (data.stderr || '') + '\n\n' + JSON.stringify(data, null, 2));
+                }
+            } catch (error) {
+                updateTestStatus(testPath, 'failed');
+                updateStatus('Error running test', 'danger');
+                showResults('Error: ' + error.message);
+            } finally {
+                isRunning = false;
+            }
+        }
+        
+        window.refreshTestList = async function() {
+            try {
+                const response = await fetch('/test-dashboard/api/tests/');
+                const data = await response.json();
+                const totalTests = document.getElementById('total-tests');
+                if (totalTests) {
+                    totalTests.textContent = data.tests.length;
+                }
+                location.reload();
+            } catch (error) {
+                alert('Error refreshing test list: ' + error.message);
+            }
+        }
+        
+        // Auto-populate when method changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const methodSelect = document.getElementById('method-select');
+            const pathInput = document.getElementById('endpoint-path');
+            
+            if (methodSelect) {
+                methodSelect.addEventListener('change', function() {
+                    const path = pathInput ? pathInput.value.trim() : '';
+                    const method = this.value;
+                    if (path) {
+                        window.loadExampleBody(path, method);
+                    }
+                });
+            }
+            
+            // Auto-populate when path changes manually
+            if (pathInput) {
+                pathInput.addEventListener('blur', function() {
+                    const path = this.value.trim();
+                    const method = methodSelect ? methodSelect.value : 'GET';
+                    if (path) {
+                        window.loadExampleBody(path, method);
+                    }
+                });
+            }
+            
+            const endpointsTab = document.getElementById('endpoints-tab');
+            if (endpointsTab && endpointsTab.classList.contains('active')) {
+                window.loadEndpoints();
+            }
+        });
+        
+        // Also load if tab is already active (for immediate execution)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                const endpointsTab = document.getElementById('endpoints-tab');
+                if (endpointsTab && endpointsTab.classList.contains('active')) {
+                    window.loadEndpoints();
+                }
+            });
+        } else {
+            // DOM already loaded
+            const endpointsTab = document.getElementById('endpoints-tab');
+            if (endpointsTab && endpointsTab.classList.contains('active')) {
+                window.loadEndpoints();
+            }
+            
+            // Set up event listeners if DOM is ready
+            setTimeout(function() {
+                const methodSelect = document.getElementById('method-select');
+                const pathInput = document.getElementById('endpoint-path');
+                
+                if (methodSelect) {
+                    methodSelect.addEventListener('change', function() {
+                        const path = pathInput ? pathInput.value.trim() : '';
+                        const method = this.value;
+                        if (path) {
+                            window.loadExampleBody(path, method);
+                        }
+                    });
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

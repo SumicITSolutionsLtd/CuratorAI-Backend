@@ -55,24 +55,41 @@ class LookbookSerializer(serializers.ModelSerializer):
     
     def get_price_range(self, obj):
         # Calculate price range from outfits
-        outfits = obj.outfits.all()
-        if not outfits:
+        try:
+            outfits = obj.outfits.all()
+            if not outfits:
+                return None
+            
+            prices = []
+            for outfit_rel in outfits:
+                if hasattr(outfit_rel, 'outfit') and outfit_rel.outfit:
+                    outfit = outfit_rel.outfit
+                    if hasattr(outfit, 'total_price') and outfit.total_price:
+                        prices.append(outfit.total_price)
+            
+            if not prices:
+                return None
+            
+            return {
+                'min': float(min(prices)),
+                'max': float(max(prices)),
+                'currency': 'USD'
+            }
+        except Exception:
             return None
-        
-        prices = [outfit.outfit.total_price for outfit in outfits if outfit.outfit.total_price]
-        if not prices:
-            return None
-        
-        return {
-            'min': float(min(prices)),
-            'max': float(max(prices)),
-            'currency': 'USD'
-        }
     
     def get_total_value(self, obj):
-        outfits = obj.outfits.all()
-        total = sum(outfit.outfit.total_price for outfit in outfits if outfit.outfit.total_price)
-        return float(total) if total else 0
+        try:
+            outfits = obj.outfits.all()
+            total = 0
+            for outfit_rel in outfits:
+                if hasattr(outfit_rel, 'outfit') and outfit_rel.outfit:
+                    outfit = outfit_rel.outfit
+                    if hasattr(outfit, 'total_price') and outfit.total_price:
+                        total += outfit.total_price
+            return float(total) if total else 0
+        except Exception:
+            return 0
 
 
 class LookbookCreateSerializer(serializers.ModelSerializer):

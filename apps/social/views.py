@@ -44,28 +44,36 @@ class SocialFeedView(generics.ListAPIView):
         feed_type = self.request.query_params.get('type', 'following')
         user = self.request.user
         
-        if feed_type == 'following':
-            # Posts from users the current user follows
-            following_users = user.following.values_list('following_id', flat=True)
-            queryset = Post.objects.filter(
-                user_id__in=following_users,
-                is_deleted=False,
-                privacy='public'
-            )
-        elif feed_type == 'trending':
-            # Posts with high engagement
-            queryset = Post.objects.filter(
-                is_deleted=False,
-                privacy='public'
-            ).order_by('-likes_count', '-created_at')
-        else:  # discover
-            # All public posts
-            queryset = Post.objects.filter(
-                is_deleted=False,
-                privacy='public'
-            ).exclude(user=user)
+        try:
+            if feed_type == 'following':
+                # Posts from users the current user follows
+                following_users = list(user.following.values_list('following_id', flat=True))
+                if following_users:
+                    queryset = Post.objects.filter(
+                        user_id__in=following_users,
+                        is_deleted=False,
+                        privacy='public'
+                    )
+                else:
+                    # Return empty queryset if user doesn't follow anyone
+                    queryset = Post.objects.none()
+            elif feed_type == 'trending':
+                # Posts with high engagement
+                queryset = Post.objects.filter(
+                    is_deleted=False,
+                    privacy='public'
+                ).order_by('-likes_count', '-created_at')
+            else:  # discover
+                # All public posts
+                queryset = Post.objects.filter(
+                    is_deleted=False,
+                    privacy='public'
+                ).exclude(user=user)
+        except Exception as e:
+            # Fallback to empty queryset on any error
+            queryset = Post.objects.none()
         
-        return queryset
+        return queryset.order_by('-created_at')
 
 
 class PostDetailView(generics.RetrieveAPIView):
@@ -136,6 +144,19 @@ class PostCreateView(generics.CreateAPIView):
             401: UnauthorizedErrorResponse,
         }
     )
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        instance = serializer.instance
+        
+        # Return wrapped response
+        return Response({
+            'success': True,
+            'message': 'Post created successfully',
+            'data': PostSerializer(instance, context={'request': request}).data
+        }, status=status.HTTP_201_CREATED)
+    
     def perform_create(self, serializer):
         post = serializer.save(user=self.request.user)
         

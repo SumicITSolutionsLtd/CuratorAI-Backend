@@ -108,7 +108,7 @@ class GoogleOAuthView(views.APIView):
     def _verify_google_token(self, access_token):
         """Verify Google access token and get user info."""
         try:
-            # Get user info from Google
+            # First try v2 API
             response = requests.get(
                 'https://www.googleapis.com/oauth2/v2/userinfo',
                 headers={'Authorization': f'Bearer {access_token}'},
@@ -117,8 +117,39 @@ class GoogleOAuthView(views.APIView):
             
             if response.status_code == 200:
                 return response.json()
+            
+            # If v2 fails, try v3 API
+            response = requests.get(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            
+            # If both fail, try tokeninfo endpoint to verify token
+            token_response = requests.get(
+                f'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={access_token}',
+                timeout=10
+            )
+            
+            if token_response.status_code == 200:
+                token_info = token_response.json()
+                # If token is valid but we can't get userinfo, return error
+                return None
+            
             return None
-        except Exception:
+        except requests.exceptions.RequestException as e:
+            # Log the error for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Google token verification error: {str(e)}')
+            return None
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Unexpected error verifying Google token: {str(e)}')
             return None
     
     def _get_or_create_user_from_google(self, google_user_info):

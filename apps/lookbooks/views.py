@@ -142,6 +142,19 @@ class LookbookCreateView(generics.CreateAPIView):
             401: UnauthorizedErrorResponse,
         }
     )
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        instance = serializer.instance
+        
+        # Return wrapped response
+        return Response({
+            'success': True,
+            'message': 'Lookbook created successfully',
+            'data': LookbookSerializer(instance, context={'request': request}).data
+        }, status=status.HTTP_201_CREATED)
+    
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
 

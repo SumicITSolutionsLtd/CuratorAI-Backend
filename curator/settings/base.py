@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'apps.cart',
     'apps.social',
     'apps.lookbooks',
+    'apps.test_dashboard',
 ]
 
 MIDDLEWARE = [

@@ -81,6 +81,9 @@ urlpatterns = [
     path('api/v1/cart/', include('apps.cart.urls')),
     path('api/v1/social/', include('apps.social.urls')),
     path('api/v1/lookbooks/', include('apps.lookbooks.urls')),
+    
+    # Test Dashboard
+    path('test-dashboard/', include('apps.test_dashboard.urls')),
 ]
 
 # Serve media files in development

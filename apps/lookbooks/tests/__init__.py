@@ -1,0 +1,2 @@
+# Tests for lookbooks app
+

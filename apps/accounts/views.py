@@ -245,7 +245,13 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
         }
     )
     def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'message': 'User retrieved successfully',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
     
     @extend_schema(
         summary="Update current user",
@@ -266,7 +272,20 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
         }
     )
     def put(self, request, *args, **kwargs):
-        return super().put(request, *args, **kwargs)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        instance.refresh_from_db()
+        
+        return Response({
+            'success': True,
+            'message': 'User updated successfully',
+            'data': UserSerializer(instance).data
+        }, status=status.HTTP_200_OK)
+    
+    def patch(self, request, *args, **kwargs):
+        return self.put(request, *args, **kwargs)
 
 
 class UserDetailView(generics.RetrieveAPIView):
