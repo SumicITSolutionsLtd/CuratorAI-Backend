@@ -63,14 +63,24 @@ class SocialFeedView(generics.ListAPIView):
                     is_deleted=False,
                     privacy='public'
                 ).order_by('-likes_count', '-created_at')
+            elif feed_type == 'forYou' or feed_type == 'foryou':
+                # "For You" feed - mix of all public posts including user's own posts
+                # This is similar to discover but includes the user's own posts
+                queryset = Post.objects.filter(
+                    is_deleted=False,
+                    privacy='public'
+                )
             else:  # discover
-                # All public posts
+                # All public posts (excluding user's own posts)
                 queryset = Post.objects.filter(
                     is_deleted=False,
                     privacy='public'
                 ).exclude(user=user)
         except Exception as e:
-            # Fallback to empty queryset on any error
+            # Log the error and fallback to empty queryset
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in get_queryset: {str(e)}", exc_info=True)
             queryset = Post.objects.none()
         
         return queryset.order_by('-created_at')
