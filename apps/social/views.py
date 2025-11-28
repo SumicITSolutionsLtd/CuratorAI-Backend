@@ -161,91 +161,91 @@ class PostCreateView(generics.CreateAPIView):
                     if image:  # Check if file is not None
                         PostImage.objects.create(post=post, image=image, order=idx)
             
-             # Return wrapped response - refresh from DB to ensure all relationships are loaded
-             post.refresh_from_db()
-             
-             # Try to serialize the post with proper error handling
-             import logging
-             import traceback
-             logger = logging.getLogger(__name__)
-             
-             try:
-                 # Use select_related to prefetch user and outfit to avoid N+1 queries
-                 post = Post.objects.select_related('user', 'outfit').prefetch_related('images').get(pk=post.pk)
-                 serializer_data = PostSerializer(post, context={'request': request}).data
-             except Exception as serialization_error:
-                 # Log serialization error with full traceback
-                 error_traceback = traceback.format_exc()
-                 logger.error(f"Error serializing post response: {str(serialization_error)}")
-                 logger.error(f"Full traceback:\n{error_traceback}")
-                 
-                 # Return a simplified response if serialization fails
-                 try:
-                     serializer_data = {
-                         'id': post.id,
-                         'caption': getattr(post, 'caption', ''),
-                         'tags': getattr(post, 'tags', []),
-                         'privacy': getattr(post, 'privacy', 'public'),
-                         'created_at': post.created_at.isoformat() if hasattr(post, 'created_at') and post.created_at else None,
-                         'updated_at': post.updated_at.isoformat() if hasattr(post, 'updated_at') and post.updated_at else None,
-                     }
-                     
-                     # Try to add user info safely
-                     try:
-                         if post.user:
-                             serializer_data['user'] = {
-                                 'id': post.user.id,
-                                 'username': getattr(post.user, 'username', ''),
-                                 'first_name': getattr(post.user, 'first_name', ''),
-                                 'last_name': getattr(post.user, 'last_name', ''),
-                             }
-                         else:
-                             serializer_data['user'] = None
-                     except Exception as user_error:
-                         logger.error(f"Error serializing user: {str(user_error)}")
-                         serializer_data['user'] = None
-                     
-                     # Try to add images safely
-                     try:
-                         images = []
-                         for img in post.images.all()[:10]:  # Limit to 10 images
-                             img_data = {
-                                 'id': img.id,
-                                 'order': getattr(img, 'order', 0),
-                             }
-                             # Try to get image URL
-                             if hasattr(img, 'image_url') and img.image_url:
-                                 img_data['image'] = img.image_url
-                             elif hasattr(img, 'image') and img.image:
-                                 try:
-                                     img_data['image'] = request.build_absolute_uri(img.image.url) if request else img.image.url
-                                 except:
-                                     img_data['image'] = None
-                             else:
-                                 img_data['image'] = None
-                             images.append(img_data)
-                         serializer_data['images'] = images
-                     except Exception as img_error:
-                         logger.error(f"Error serializing images: {str(img_error)}")
-                         serializer_data['images'] = []
-                     
-                     # Add other fields safely
-                     serializer_data['likes_count'] = getattr(post, 'likes_count', 0)
-                     serializer_data['comments_count'] = getattr(post, 'comments_count', 0)
-                     serializer_data['saves_count'] = getattr(post, 'saves_count', 0)
-                     serializer_data['views_count'] = getattr(post, 'views_count', 0)
-                     serializer_data['is_liked'] = False
-                     serializer_data['is_saved'] = False
-                     serializer_data['outfit'] = None
-                     serializer_data['outfit_id'] = post.outfit.id if hasattr(post, 'outfit') and post.outfit else None
-                     
-                 except Exception as e:
-                     logger.error(f"Error creating simplified response: {str(e)}", exc_info=True)
-                     # Last resort - minimal response
-                     serializer_data = {
-                         'id': post.id,
-                         'caption': getattr(post, 'caption', ''),
-                     }
+            # Return wrapped response - refresh from DB to ensure all relationships are loaded
+            post.refresh_from_db()
+            
+            # Try to serialize the post with proper error handling
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            
+            try:
+                # Use select_related to prefetch user and outfit to avoid N+1 queries
+                post = Post.objects.select_related('user', 'outfit').prefetch_related('images').get(pk=post.pk)
+                serializer_data = PostSerializer(post, context={'request': request}).data
+            except Exception as serialization_error:
+                # Log serialization error with full traceback
+                error_traceback = traceback.format_exc()
+                logger.error(f"Error serializing post response: {str(serialization_error)}")
+                logger.error(f"Full traceback:\n{error_traceback}")
+                
+                # Return a simplified response if serialization fails
+                try:
+                    serializer_data = {
+                        'id': post.id,
+                        'caption': getattr(post, 'caption', ''),
+                        'tags': getattr(post, 'tags', []),
+                        'privacy': getattr(post, 'privacy', 'public'),
+                        'created_at': post.created_at.isoformat() if hasattr(post, 'created_at') and post.created_at else None,
+                        'updated_at': post.updated_at.isoformat() if hasattr(post, 'updated_at') and post.updated_at else None,
+                    }
+                    
+                    # Try to add user info safely
+                    try:
+                        if post.user:
+                            serializer_data['user'] = {
+                                'id': post.user.id,
+                                'username': getattr(post.user, 'username', ''),
+                                'first_name': getattr(post.user, 'first_name', ''),
+                                'last_name': getattr(post.user, 'last_name', ''),
+                            }
+                        else:
+                            serializer_data['user'] = None
+                    except Exception as user_error:
+                        logger.error(f"Error serializing user: {str(user_error)}")
+                        serializer_data['user'] = None
+                    
+                    # Try to add images safely
+                    try:
+                        images = []
+                        for img in post.images.all()[:10]:  # Limit to 10 images
+                            img_data = {
+                                'id': img.id,
+                                'order': getattr(img, 'order', 0),
+                            }
+                            # Try to get image URL
+                            if hasattr(img, 'image_url') and img.image_url:
+                                img_data['image'] = img.image_url
+                            elif hasattr(img, 'image') and img.image:
+                                try:
+                                    img_data['image'] = request.build_absolute_uri(img.image.url) if request else img.image.url
+                                except:
+                                    img_data['image'] = None
+                            else:
+                                img_data['image'] = None
+                            images.append(img_data)
+                        serializer_data['images'] = images
+                    except Exception as img_error:
+                        logger.error(f"Error serializing images: {str(img_error)}")
+                        serializer_data['images'] = []
+                    
+                    # Add other fields safely
+                    serializer_data['likes_count'] = getattr(post, 'likes_count', 0)
+                    serializer_data['comments_count'] = getattr(post, 'comments_count', 0)
+                    serializer_data['saves_count'] = getattr(post, 'saves_count', 0)
+                    serializer_data['views_count'] = getattr(post, 'views_count', 0)
+                    serializer_data['is_liked'] = False
+                    serializer_data['is_saved'] = False
+                    serializer_data['outfit'] = None
+                    serializer_data['outfit_id'] = post.outfit.id if hasattr(post, 'outfit') and post.outfit else None
+                    
+                except Exception as e:
+                    logger.error(f"Error creating simplified response: {str(e)}", exc_info=True)
+                    # Last resort - minimal response
+                    serializer_data = {
+                        'id': post.id,
+                        'caption': getattr(post, 'caption', ''),
+                    }
             
             return Response({
                 'success': True,
