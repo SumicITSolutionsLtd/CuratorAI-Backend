@@ -1014,9 +1014,11 @@
                 return;
             }
             
-            // Normalize path - remove trailing slash for matching
+            // Normalize path - remove trailing slash for matching (but keep it for cart items detection)
             const normalizePath = (p) => p.replace(/\/$/, '') || p;
             const normalizedPath = normalizePath(path);
+            // Keep original path for cart endpoint detection
+            const originalPath = path.toLowerCase();
             
             // Comprehensive example request bodies for all endpoints
             const examples = {
@@ -1144,6 +1146,23 @@
             
             // POST requests
             if (method === 'POST') {
+                // Cart - Add item to cart (POST to /cart/<user_id>/items/)
+                // Check original path (with trailing slash) for better matching
+                if (originalPath.match(/\/cart\/\d+\/items\/?$/) && !originalPath.match(/\/items\/\d+/)) {
+                    bodyField.value = JSON.stringify({
+                        "outfit_item_id": 1,
+                        "name": "Blue Jeans",
+                        "brand": "Levi's",
+                        "price": "79.99",
+                        "size": "M",
+                        "color": "blue",
+                        "quantity": 1,
+                        "image_url": "https://example.com/image.jpg",
+                        "product_url": "https://example.com/product/1",
+                        "in_stock": true
+                    }, null, 2);
+                    return;
+                }
                 // Authentication endpoints
                 if (lowerPath.includes('/login')) {
                     bodyField.value = JSON.stringify({
@@ -1275,16 +1294,6 @@
                     return;
                 }
                 
-                // Cart
-                if (lowerPath.includes('/cart/items') && !lowerPath.includes('/items/')) {
-                    bodyField.value = JSON.stringify({
-                        "product_id": 1,
-                        "quantity": 2,
-                        "size": "M",
-                        "color": "blue"
-                    }, null, 2);
-                    return;
-                }
                 if (lowerPath.includes('/cart/promo')) {
                     bodyField.value = JSON.stringify({
                         "code": "SAVE20"
@@ -1352,9 +1361,10 @@
                     }, null, 2);
                     return;
                 }
-                if (lowerPath.includes('/cart/items/') && !lowerPath.includes('/remove')) {
+                // Cart - Update item quantity (PATCH to /cart/<user_id>/items/<item_id>/)
+                if (lowerPath.includes('/cart/') && lowerPath.includes('/items/') && !lowerPath.includes('/remove') && lowerPath.match(/\/cart\/\d+\/items\/\d+\//)) {
                     bodyField.value = JSON.stringify({
-                        "quantity": 3
+                        "quantity": 2
                     }, null, 2);
                     return;
                 }
