@@ -148,7 +148,19 @@ def custom_exception_handler(exc, context):
     
     # Handle unhandled exceptions (500 errors)
     elif response is None:
-        # Log the exception in production (you can add logging here)
+        # Log the exception with full traceback
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        
+        # Get full traceback
+        tb_lines = traceback.format_exception(type(exc), exc, exc.__traceback__)
+        full_traceback = ''.join(tb_lines)
+        
+        # Log the error with full traceback
+        logger.error(f"Unhandled exception: {type(exc).__name__}: {str(exc)}")
+        logger.error(f"Full traceback:\n{full_traceback}")
+        
         error_response = {
             'success': False,
             'error': {
@@ -161,12 +173,8 @@ def custom_exception_handler(exc, context):
         
         # In development, include the actual error message and full traceback
         from django.conf import settings
-        import traceback
         if settings.DEBUG:
             error_response['error']['message'] = str(exc)
-            # Get full traceback
-            tb_lines = traceback.format_exception(type(exc), exc, exc.__traceback__)
-            full_traceback = ''.join(tb_lines)
             error_response['error']['details'] = {
                 'exception_type': type(exc).__name__,
                 'exception_message': str(exc),
