@@ -116,16 +116,24 @@ WSGI_APPLICATION = 'curator.wsgi.application'
 ASGI_APPLICATION = 'curator.asgi.application'
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='curator_db'),
-        'USER': config('DB_USER', default='curator_user'),
-        'PASSWORD': config('DB_PASSWORD', default='curator_pass'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+# Support DATABASE_URL for easy configuration (used in production)
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='curator_db'),
+            'USER': config('DB_USER', default='curator_user'),
+            'PASSWORD': config('DB_PASSWORD', default='curator_pass'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
