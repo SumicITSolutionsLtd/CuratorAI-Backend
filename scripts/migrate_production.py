@@ -12,8 +12,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
 # Set up Django - use base settings (will use DATABASE_URL if set)
-# Strip any whitespace from settings module
-settings_module = os.environ.get('DJANGO_SETTINGS_MODULE', 'curator.settings.base').strip()
+# Strip any whitespace from settings module and ensure it's set
+settings_module = os.environ.get('DJANGO_SETTINGS_MODULE', '').strip()
+if not settings_module or settings_module == '':
+    settings_module = 'curator.settings.base'
 os.environ['DJANGO_SETTINGS_MODULE'] = settings_module
 django.setup()
 
@@ -54,6 +56,12 @@ def show_missing_tables():
         'lookbook_outfits': 'Lookbooks app',
         'lookbook_likes': 'Lookbooks app',
         'wardrobe_items': 'Wardrobe app',
+        'posts': 'Social app',
+        'post_images': 'Social app',
+        'post_likes': 'Social app',
+        'post_saves': 'Social app',
+        'comments': 'Social app',
+        'comment_likes': 'Social app',
     }
     
     missing = []
@@ -72,11 +80,11 @@ def show_missing_tables():
 
 
 def run_migrations():
-    """Run migrations for lookbooks and wardrobe apps."""
-    print("\n🔄 Running migrations for lookbooks and wardrobe apps...")
+    """Run migrations for lookbooks, wardrobe, and social apps."""
+    print("\n🔄 Running migrations for lookbooks, wardrobe, and social apps...")
     try:
         # Run migrations for each app separately
-        apps_to_migrate = ['lookbooks', 'wardrobe']
+        apps_to_migrate = ['lookbooks', 'wardrobe', 'social']
         
         for app in apps_to_migrate:
             print(f"\n  Migrating {app}...")

@@ -596,7 +596,8 @@
                                 🔑 Get Token
                             </button>
                         </div>
-                        <span class="help-text">JWT token for authenticated endpoints. Click "Get Token" to auto-generate.</span>
+                        <span class="help-text">JWT token for authenticated endpoints. Click "Get Token" to auto-generate. User ID is auto-extracted from token.</span>
+                        <input type="hidden" id="user-id" value="">
                     </div>
                     
                     <div class="form-group full-width">
@@ -863,6 +864,19 @@
                     event.currentTarget.classList.add('selected');
                 }
                 
+                // For cart endpoints, auto-populate user_id from token if available
+                if (path.includes('/cart/')) {
+                    window.updateUserIdFromToken();
+                    // Also replace <user_id> in path if token has user_id
+                    const tokenField = document.getElementById('auth-token');
+                    if (tokenField && tokenField.value.trim()) {
+                        const userId = window.decodeJWT(tokenField.value.trim());
+                        if (userId && pathInput) {
+                            pathInput.value = path.replace(/<user_id>|<int:user_id>/g, userId);
+                        }
+                    }
+                }
+                
                 // Auto-populate request body and token immediately
                 // Call directly first, then also with timeout as backup
                 autoPopulateEndpoint(path, method);
@@ -906,6 +920,50 @@
             return authEndpoints.some(ep => path.includes(ep) || path.startsWith(ep));
         }
         
+        // Decode JWT token to extract user_id
+        window.decodeJWT = function(token) {
+            try {
+                if (!token) return null;
+                const parts = token.split('.');
+                if (parts.length !== 3) return null;
+                const payload = parts[1];
+                // Add padding if needed
+                const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+                const decoded = JSON.parse(atob(paddedPayload));
+                return decoded.user_id || decoded.userId || null;
+            } catch (error) {
+                console.error('Error decoding JWT:', error);
+                return null;
+            }
+        };
+        
+        // Auto-populate user_id from token when token changes
+        window.updateUserIdFromToken = function() {
+            const tokenField = document.getElementById('auth-token');
+            const userIdField = document.getElementById('user-id');
+            const pathInput = document.getElementById('endpoint-path');
+            
+            if (!tokenField || !userIdField) return;
+            
+            const token = tokenField.value.trim();
+            if (!token) return;
+            
+            const userId = window.decodeJWT(token);
+            if (userId) {
+                userIdField.value = userId;
+                
+                // For cart endpoints, auto-replace <user_id> in path
+                if (pathInput && pathInput.value.includes('/cart/')) {
+                    const currentPath = pathInput.value;
+                    // Replace <user_id> or <int:user_id> with actual user_id
+                    const updatedPath = currentPath.replace(/<user_id>|<int:user_id>/g, userId);
+                    if (updatedPath !== currentPath) {
+                        pathInput.value = updatedPath;
+                    }
+                }
+            }
+        };
+        
         window.generateTestToken = async function() {
             try {
                 const response = await fetch('/test-dashboard/api/create-test-user/', {
@@ -919,8 +977,12 @@
                 if (data.success && data.tokens) {
                     const tokenField = document.getElementById('auth-token');
                     const userIdField = document.getElementById('user-id');
-                    if (tokenField) tokenField.value = data.tokens.access;
-                    // Also populate user ID
+                    if (tokenField) {
+                        tokenField.value = data.tokens.access;
+                        // Auto-update user_id from token
+                        window.updateUserIdFromToken();
+                    }
+                    // Also populate user ID directly (backup)
                     if (data.user && data.user.id && userIdField) {
                         userIdField.value = data.user.id;
                     }
@@ -1476,6 +1538,19 @@
             } else if (statusCode === 401) {
                 frontendSummary += `\n\n💡 Tip: This endpoint requires authentication. Add a JWT token in the "Authentication Token" field above.`;
                 backendSummary += `\n\nAuthentication required. Provide a valid JWT token in the Authorization header.`;
+            } else if (statusCode === 403) {
+                const errorData = response.data || response.parsed_content || {};
+                const errorMessage = errorData.error?.details?.detail?.[0] || errorData.error?.message || errorData.message || '';
+                const path = result.request?.path || '';
+                
+                // Special handling for cart endpoints
+                if (path.includes('/cart/') && (errorMessage.includes('cart') || errorMessage.includes('own'))) {
+                    frontendSummary += `\n\n💡 Tip: Cart endpoints require the user_id in the URL to match the authenticated user. The user_id is automatically extracted from your JWT token. If you see this error:\n1. Make sure you have a valid token (click "Get Token" if needed)\n2. The user_id field should be auto-populated from the token\n3. The path should use the same user_id as in your token`;
+                    backendSummary += `\n\nPermission denied: ${errorMessage}. Cart endpoints check that request.user.id matches the user_id in the URL path.`;
+                } else {
+                    frontendSummary += `\n\n💡 Tip: This endpoint returned a 403 Forbidden error. This usually means you don't have permission to access this resource. Check if you're using the correct user_id or if the resource belongs to a different user.`;
+                    backendSummary += `\n\nPermission denied: ${errorMessage || 'You do not have permission to perform this action'}`;
+                }
             } else if (statusCode === 404) {
                 frontendSummary += `\n\n💡 Tip: The endpoint path might be incorrect, or the resource doesn't exist. Check the URL path.`;
                 backendSummary += `\n\nEndpoint not found. Verify the URL path is correct.`;
@@ -1859,6 +1934,24 @@
                     if (path) {
                         window.loadExampleBody(path, method);
                     }
+                    // For cart endpoints, update user_id from token
+                    if (path.includes('/cart/')) {
+                        window.updateUserIdFromToken();
+                    }
+                });
+            }
+            
+            // Auto-extract user_id when token changes
+            const authTokenField = document.getElementById('auth-token');
+            if (authTokenField) {
+                authTokenField.addEventListener('input', function() {
+                    window.updateUserIdFromToken();
+                });
+                authTokenField.addEventListener('paste', function() {
+                    // Wait for paste to complete
+                    setTimeout(() => {
+                        window.updateUserIdFromToken();
+                    }, 10);
                 });
             }
             

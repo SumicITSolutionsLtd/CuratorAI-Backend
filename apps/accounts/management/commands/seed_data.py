@@ -11,6 +11,11 @@ from apps.accounts.models import UserProfile, StylePreference, UserFollowing
 from apps.outfits.models import Outfit, OutfitItem, OutfitLike, OutfitSave
 from apps.lookbooks.models import Lookbook, LookbookOutfit, LookbookLike
 from apps.wardrobe.models import Wardrobe, WardrobeItem
+try:
+    from apps.social.models import Post, PostImage, PostLike, PostSave, Comment, CommentLike
+    SOCIAL_APP_AVAILABLE = True
+except ImportError:
+    SOCIAL_APP_AVAILABLE = False
 
 User = get_user_model()
 
@@ -42,6 +47,12 @@ class Command(BaseCommand):
             type=int,
             default=100,
             help='Number of wardrobe items to create per user'
+        )
+        parser.add_argument(
+            '--posts',
+            type=int,
+            default=50,
+            help='Number of social posts to create'
         )
         parser.add_argument(
             '--clear',
@@ -104,11 +115,11 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Starting database seeding...'))
 
         # Seed users
-        users = self.seed_users(options['users'])
+        users = self.seed_users(options.get('users', 20))
         self.stdout.write(self.style.SUCCESS(f'Created {len(users)} users'))
 
         # Seed outfits
-        outfits = self.seed_outfits(users, options['outfits'])
+        outfits = self.seed_outfits(users, options.get('outfits', 50))
         self.stdout.write(self.style.SUCCESS(f'Created {len(outfits)} outfits'))
 
         # Seed social interactions
@@ -116,12 +127,19 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Created social interactions'))
 
         # Seed lookbooks
-        lookbooks = self.seed_lookbooks(users, outfits, options['lookbooks'])
+        lookbooks = self.seed_lookbooks(users, outfits, options.get('lookbooks', 20))
         self.stdout.write(self.style.SUCCESS(f'Created {len(lookbooks)} lookbooks'))
 
         # Seed wardrobe items
-        self.seed_wardrobe_items(users, options['wardrobe-items'])
+        self.seed_wardrobe_items(users, options.get('wardrobe-items', 100))
         self.stdout.write(self.style.SUCCESS(f'Created wardrobe items for {len(users)} users'))
+
+        # Seed social posts
+        if SOCIAL_APP_AVAILABLE:
+            posts = self.seed_social_posts(users, outfits, options.get('posts', 50))
+            self.stdout.write(self.style.SUCCESS(f'Created {len(posts)} social posts'))
+        else:
+            self.stdout.write(self.style.WARNING('Social app not available, skipping posts'))
 
         self.stdout.write(self.style.SUCCESS('✅ Database seeding completed successfully!'))
 
@@ -705,3 +723,155 @@ class Command(BaseCommand):
                     purchase_date=timezone.now().date() - timedelta(days=random.randint(30, 1000)) if random.choice([True, False]) else None,
                     purchase_link=f"https://example.com/product/{random.randint(1000, 9999)}" if random.choice([True, False]) else '',
                 )
+
+    def seed_social_posts(self, users, outfits, count):
+        """Create social posts with comments, likes, and saves."""
+        if not SOCIAL_APP_AVAILABLE:
+            return []
+        
+        posts = []
+        captions = [
+            "Feeling confident in this outfit! ✨ #OOTD #Fashion",
+            "Loving this new look! What do you think? 👗",
+            "Perfect for a day out! #StyleInspiration",
+            "Can't get enough of this combination! 💕",
+            "This outfit makes me feel amazing! #Confidence",
+            "Trying something new today! Thoughts? 🤔",
+            "One of my favorite looks! #FashionWeek",
+            "Casual but chic! #EverydayStyle",
+            "This never goes out of style! #Classic",
+            "Feeling the vibes! ✨ #GoodVibes",
+            "New favorite outfit! #NewFavorites",
+            "This is giving me life! 💃 #Fashionista",
+            "Simple but elegant! #MinimalistStyle",
+            "Love how this turned out! #OutfitOfTheDay",
+            "This combo is everything! 🔥 #StyleGoals",
+        ]
+        
+        hashtags_pool = [
+            'OOTD', 'Fashion', 'Style', 'Outfit', 'Fashionista', 'FashionWeek',
+            'StyleInspiration', 'FashionBlogger', 'StreetStyle', 'FashionStyle',
+            'FashionAddict', 'FashionDiary', 'StyleGoals', 'FashionLover',
+            'OutfitOfTheDay', 'FashionInspo', 'StyleOfTheDay', 'FashionDaily',
+            'MinimalistStyle', 'CasualStyle', 'ChicStyle', 'ElegantStyle'
+        ]
+        
+        locations = [
+            ('New York, NY', 40.7128, -74.0060),
+            ('Los Angeles, CA', 34.0522, -118.2437),
+            ('London, UK', 51.5074, -0.1278),
+            ('Paris, France', 48.8566, 2.3522),
+            ('Tokyo, Japan', 35.6762, 139.6503),
+            ('Milan, Italy', 45.4642, 9.1900),
+            ('Berlin, Germany', 52.5200, 13.4050),
+            ('Sydney, Australia', -33.8688, 151.2093),
+        ]
+        
+        for i in range(count):
+            user = random.choice(users)
+            outfit = random.choice(outfits) if outfits else None
+            
+            # Generate caption
+            caption = random.choice(captions)
+            # Add random hashtags
+            num_tags = random.randint(2, 5)
+            tags = random.sample(hashtags_pool, k=num_tags)
+            
+            # Random location (50% chance)
+            location_name = ''
+            location_lat = None
+            location_lng = None
+            if random.choice([True, False]):
+                loc_name, lat, lng = random.choice(locations)
+                location_name = loc_name
+                location_lat = lat
+                location_lng = lng
+            
+            # Create post
+            post = Post.objects.create(
+                user=user,
+                caption=caption,
+                tags=tags,
+                outfit=outfit,
+                tagged_items=[],  # Empty for now, can be enhanced later
+                location_name=location_name,
+                location_lat=location_lat,
+                location_lng=location_lng,
+                privacy=random.choice(['public', 'public', 'public', 'friends']),  # 75% public
+                likes_count=0,
+                comments_count=0,
+                shares_count=random.randint(0, 20),
+                saves_count=0,
+                views_count=random.randint(50, 5000),
+                is_deleted=False,
+                created_at=timezone.now() - timedelta(days=random.randint(0, 90))
+            )
+            
+            # Add likes
+            num_likes = random.randint(0, len(users) // 2)
+            likers = random.sample(users, k=min(num_likes, len(users)))
+            for liker in likers:
+                if liker != user:
+                    PostLike.objects.get_or_create(
+                        user=liker,
+                        post=post
+                    )
+            post.likes_count = PostLike.objects.filter(post=post).count()
+            
+            # Add saves
+            num_saves = random.randint(0, len(users) // 3)
+            savers = random.sample(users, k=min(num_saves, len(users)))
+            for saver in savers:
+                if saver != user:
+                    PostSave.objects.get_or_create(
+                        user=saver,
+                        post=post
+                    )
+            post.saves_count = PostSave.objects.filter(post=post).count()
+            
+            # Add comments
+            num_comments = random.randint(0, 10)
+            commenters = random.sample(users, k=min(num_comments, len(users)))
+            comment_texts = [
+                "Love this! 😍",
+                "So cute! Where did you get it?",
+                "This is amazing! ✨",
+                "You look great!",
+                "Perfect styling! 👌",
+                "This is goals! 🔥",
+                "Beautiful outfit!",
+                "I need this in my wardrobe!",
+                "So inspiring! 💕",
+                "Can't wait to try this!",
+            ]
+            
+            for commenter in commenters:
+                if commenter != user:
+                    comment = Comment.objects.create(
+                        post=post,
+                        user=commenter,
+                        content=random.choice(comment_texts),
+                        likes_count=0,
+                        is_deleted=False,
+                        created_at=post.created_at + timedelta(minutes=random.randint(1, 1440))
+                    )
+                    
+                    # Add some likes to comments
+                    if random.choice([True, False]):
+                        num_comment_likes = random.randint(0, 5)
+                        comment_likers = random.sample(users, k=min(num_comment_likes, len(users)))
+                        for liker in comment_likers:
+                            if liker != commenter:
+                                CommentLike.objects.get_or_create(
+                                    user=liker,
+                                    comment=comment
+                                )
+                        comment.likes_count = CommentLike.objects.filter(comment=comment).count()
+                        comment.save()
+            
+            post.comments_count = Comment.objects.filter(post=post, is_deleted=False).count()
+            post.save()
+            
+            posts.append(post)
+        
+        return posts
