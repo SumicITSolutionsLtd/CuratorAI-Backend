@@ -116,9 +116,9 @@ def update_user_avatars():
     users = User.objects.all()
     updated = 0
     for user in users:
-        # Always update image_url if it's empty (even if ImageField exists)
+        # Always update image_url if it's empty or None (even if ImageField exists)
         # This ensures image_url takes priority in serializers
-        if not user.avatar_url:
+        if not user.avatar_url or user.avatar_url.strip() == '':
             img_url = get_random_image_url('user')
             user.avatar_url = img_url
             user.save(update_fields=['avatar_url'])
@@ -132,8 +132,8 @@ def update_outfit_images():
     outfits = Outfit.objects.all()
     updated = 0
     for outfit in outfits:
-        # Always update main_image_url if it's empty (even if ImageField exists)
-        if not outfit.main_image_url:
+        # Always update main_image_url if it's empty or None (even if ImageField exists)
+        if not outfit.main_image_url or outfit.main_image_url.strip() == '':
             img_url = get_random_image_url('fashion')
             outfit.main_image_url = img_url
             outfit.save(update_fields=['main_image_url'])
@@ -142,12 +142,13 @@ def update_outfit_images():
 
 
 def update_wardrobe_item_images():
-    """Update all wardrobe items with images."""
+    """Update all wardrobe items with images - prioritize image_url over ImageField."""
     print("\n👜 Updating wardrobe item images...")
     items = WardrobeItem.objects.all()
     updated = 0
     for item in items:
-        if not item.primary_image_url:
+        # Always update primary_image_url if it's empty or None (even if ImageField exists)
+        if not item.primary_image_url or (isinstance(item.primary_image_url, str) and item.primary_image_url.strip() == ''):
             # Map wardrobe category to image category
             category_map = {
                 'top': 'top',
@@ -163,7 +164,7 @@ def update_wardrobe_item_images():
             item.primary_image_url = img_url
             item.save(update_fields=['primary_image_url'])
             updated += 1
-    print(f"✅ Updated {updated} wardrobe item images")
+    print(f"✅ Updated {updated} wardrobe item images with URLs")
 
 
 def update_lookbook_images():
@@ -172,8 +173,8 @@ def update_lookbook_images():
     lookbooks = Lookbook.objects.all()
     updated = 0
     for lookbook in lookbooks:
-        # Always update cover_image_url if it's empty (even if ImageField exists)
-        if not lookbook.cover_image_url:
+        # Always update cover_image_url if it's empty or None (even if ImageField exists)
+        if not lookbook.cover_image_url or lookbook.cover_image_url.strip() == '':
             img_url = get_random_image_url('fashion')
             lookbook.cover_image_url = img_url
             lookbook.save(update_fields=['cover_image_url'])
@@ -206,7 +207,7 @@ def update_post_images():
         else:
             # Update existing images that don't have image_url
             for post_image in post_images:
-                if not post_image.image_url:
+                if not post_image.image_url or post_image.image_url.strip() == '':
                     img_url = get_random_image_url('fashion')
                     post_image.image_url = img_url
                     post_image.save(update_fields=['image_url'])

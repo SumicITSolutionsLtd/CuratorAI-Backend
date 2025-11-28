@@ -61,10 +61,10 @@ class LookbookSerializer(serializers.ModelSerializer):
     
     def get_cover_image(self, obj):
         """Return image URL from cover_image_url field or ImageField as fallback."""
-        # Prioritize cover_image_url field (external URL) over ImageField
-        if obj.cover_image_url:
+        # Prioritize cover_image_url field (external URL) over ImageField - ALWAYS
+        if obj.cover_image_url and obj.cover_image_url.strip():
             return obj.cover_image_url
-        # Fallback to ImageField if cover_image_url is not set
+        # Fallback to ImageField if cover_image_url is not set or empty
         if obj.cover_image:
             request = self.context.get('request')
             if request:

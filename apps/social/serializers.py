@@ -17,10 +17,10 @@ class PostImageSerializer(serializers.ModelSerializer):
     
     def get_image(self, obj):
         """Return image URL from image_url field or ImageField as fallback."""
-        # Prioritize image_url field (external URL) over ImageField
-        if obj.image_url:
+        # Prioritize image_url field (external URL) over ImageField - ALWAYS
+        if obj.image_url and obj.image_url.strip():
             return obj.image_url
-        # Fallback to ImageField if image_url is not set
+        # Fallback to ImageField if image_url is not set or empty
         if obj.image:
             request = self.context.get('request')
             if request:
@@ -40,9 +40,9 @@ class UserBasicSerializer(serializers.ModelSerializer):
     def get_avatar(self, obj):
         """Return avatar URL from avatar_url field or ImageField as fallback."""
         # Prioritize avatar_url field (external URL) over ImageField - ALWAYS
-        if obj.avatar_url:
+        if obj.avatar_url and obj.avatar_url.strip():
             return obj.avatar_url
-        # Fallback to ImageField if avatar_url is not set
+        # Fallback to ImageField if avatar_url is not set or empty
         if obj.avatar:
             request = self.context.get('request')
             if request:
@@ -176,22 +176,18 @@ class PostCreateSerializer(serializers.ModelSerializer):
             data['privacy'] = 'public'
         return data
     
-    def create(self, validated_data, **kwargs):
+    def create(self, validated_data):
         """Create post and handle images."""
         # Extract image data
         images_data = validated_data.pop('images_data', [])
         image_urls = validated_data.pop('image_urls', [])
         
-        # Get user from kwargs (passed by view via serializer.save(user=request.user))
-        # If not in kwargs, try context as fallback
-        user = kwargs.pop('user', None)
-        if not user:
-            request = self.context.get('request')
-            if request:
-                user = request.user
+        # Get user from request context (set by view)
+        request = self.context.get('request')
+        if not request or not request.user:
+            raise serializers.ValidationError("User is required to create a post. Please ensure you are authenticated.")
         
-        if not user:
-            raise serializers.ValidationError("User is required to create a post")
+        user = request.user
         
         post = Post.objects.create(user=user, **validated_data)
         

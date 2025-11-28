@@ -35,10 +35,10 @@ class OutfitItemSerializer(serializers.ModelSerializer):
     
     def get_image(self, obj):
         """Return image URL from image_url field or ImageField as fallback."""
-        # Prioritize image_url field (external URL) over ImageField
-        if obj.image_url:
+        # Prioritize image_url field (external URL) over ImageField - ALWAYS
+        if obj.image_url and obj.image_url.strip():
             return obj.image_url
-        # Fallback to ImageField if image_url is not set
+        # Fallback to ImageField if image_url is not set or empty
         if obj.image:
             request = self.context.get('request')
             if request:
@@ -71,10 +71,10 @@ class OutfitSerializer(serializers.ModelSerializer):
     
     def get_main_image(self, obj):
         """Return image URL from main_image_url field or ImageField as fallback."""
-        # Prioritize image_url field (external URL) over ImageField
-        if obj.main_image_url:
+        # Prioritize main_image_url field (external URL) over ImageField - ALWAYS
+        if obj.main_image_url and obj.main_image_url.strip():
             return obj.main_image_url
-        # Fallback to ImageField if image_url is not set
+        # Fallback to ImageField if main_image_url is not set or empty
         if obj.main_image:
             request = self.context.get('request')
             if request:

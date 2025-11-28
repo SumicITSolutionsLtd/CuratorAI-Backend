@@ -148,9 +148,9 @@ class PostCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         
-        # Create post - user is passed as kwarg to serializer.create()
+        # Create post - user is obtained from request context in serializer.create()
         # The serializer will handle images_data and image_urls
-        post = serializer.save(user=request.user)
+        post = serializer.save()
         
         # Handle legacy multipart/form-data image uploads (if images_data/image_urls not provided)
         # This supports the old 'images' field name for backward compatibility

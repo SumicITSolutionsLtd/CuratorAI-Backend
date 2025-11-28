@@ -40,21 +40,8 @@ class WardrobeItemSerializer(serializers.ModelSerializer):
     
     def get_primary_image(self, obj):
         """Return image URL from primary_image_url field or ImageField as fallback."""
-        # Prioritize primary_image_url field (external URL) over ImageField
-        if obj.primary_image_url:
-            return obj.primary_image_url
-        # Fallback to ImageField if primary_image_url is not set
-        if obj.primary_image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.primary_image.url)
-            return obj.primary_image.url
-        return None
-    
-    def get_primary_image(self, obj):
-        """Return image URL from primary_image_url field or ImageField as fallback."""
-        # Prioritize primary_image_url field (external URL) over ImageField
-        if obj.primary_image_url:
+        # Prioritize primary_image_url field (external URL) over ImageField - ALWAYS
+        if obj.primary_image_url and obj.primary_image_url.strip():
             return obj.primary_image_url
         # Fallback to ImageField if primary_image_url is not set
         if obj.primary_image:

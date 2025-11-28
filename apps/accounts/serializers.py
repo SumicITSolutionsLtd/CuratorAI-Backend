@@ -43,10 +43,10 @@ class UserSerializer(serializers.ModelSerializer):
     
     def get_avatar(self, obj):
         """Return avatar URL from avatar_url field or ImageField as fallback."""
-        # Prioritize avatar_url field (external URL) over ImageField
-        if obj.avatar_url:
+        # Prioritize avatar_url field (external URL) over ImageField - ALWAYS
+        if obj.avatar_url and obj.avatar_url.strip():
             return obj.avatar_url
-        # Fallback to ImageField if avatar_url is not set
+        # Fallback to ImageField if avatar_url is not set or empty
         if obj.avatar:
             request = self.context.get('request')
             if request:
