@@ -164,18 +164,36 @@ class PostCreateView(generics.CreateAPIView):
             # Return wrapped response - refresh from DB to ensure all relationships are loaded
             post.refresh_from_db()
             try:
+                # Use select_related to prefetch user and outfit to avoid N+1 queries
+                from django.db.models import Prefetch
+                post = Post.objects.select_related('user', 'outfit').prefetch_related('images').get(pk=post.pk)
                 serializer_data = PostSerializer(post, context={'request': request}).data
             except Exception as serialization_error:
-                # Log serialization error
+                # Log serialization error with full traceback
                 import logging
+                import traceback
                 logger = logging.getLogger(__name__)
                 logger.error(f"Error serializing post response: {str(serialization_error)}", exc_info=True)
+                logger.error(f"Full traceback: {traceback.format_exc()}")
                 # Return a simplified response if serialization fails
-                serializer_data = {
-                    'id': post.id,
-                    'caption': post.caption,
-                    'created_at': post.created_at.isoformat() if post.created_at else None,
-                }
+                try:
+                    serializer_data = {
+                        'id': post.id,
+                        'caption': post.caption,
+                        'user': {
+                            'id': post.user.id,
+                            'username': post.user.username,
+                        } if post.user else None,
+                        'created_at': post.created_at.isoformat() if post.created_at else None,
+                        'images': [],
+                        'tags': post.tags if hasattr(post, 'tags') else [],
+                    }
+                except Exception as e:
+                    logger.error(f"Error creating simplified response: {str(e)}", exc_info=True)
+                    serializer_data = {
+                        'id': post.id,
+                        'caption': post.caption,
+                    }
             
             return Response({
                 'success': True,

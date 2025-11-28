@@ -91,7 +91,7 @@ class PostSerializer(serializers.ModelSerializer):
     images = PostImageSerializer(many=True, read_only=True)
     is_liked = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
-    outfit_id = serializers.IntegerField(source='outfit.id', read_only=True, allow_null=True)
+    outfit_id = serializers.SerializerMethodField()
     
     class Meta:
         model = Post
@@ -105,6 +105,13 @@ class PostSerializer(serializers.ModelSerializer):
             'id', 'likes_count', 'comments_count', 'shares_count', 
             'saves_count', 'views_count', 'created_at', 'updated_at'
         ]
+    
+    def get_outfit_id(self, obj):
+        """Return outfit ID if outfit exists, otherwise None."""
+        try:
+            return obj.outfit.id if obj.outfit else None
+        except Exception:
+            return None
     
     def get_is_liked(self, obj):
         try:
