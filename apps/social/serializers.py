@@ -196,10 +196,43 @@ class PostCreateSerializer(serializers.ModelSerializer):
             except Outfit.DoesNotExist:
                 raise serializers.ValidationError({'outfit_id': f'Outfit with id {outfit_id} does not exist.'})
         
-        if 'tags' not in data or not data.get('tags'):
+        # Ensure tags is always a list (JSONField expects a list)
+        if 'tags' in data:
+            tags = data.get('tags')
+            if tags is None:
+                data['tags'] = []
+            elif isinstance(tags, str):
+                # If tags is a string, try to parse it as JSON or split by comma
+                try:
+                    import json
+                    data['tags'] = json.loads(tags)
+                except (json.JSONDecodeError, ValueError):
+                    # If not valid JSON, treat as comma-separated string
+                    data['tags'] = [tag.strip() for tag in tags.split(',') if tag.strip()]
+            elif not isinstance(tags, list):
+                # Convert other types to list
+                data['tags'] = list(tags) if tags else []
+        else:
             data['tags'] = []
-        if 'tagged_items' not in data or not data.get('tagged_items'):
+        
+        # Ensure tagged_items is always a list (JSONField expects a list)
+        if 'tagged_items' in data:
+            tagged_items = data.get('tagged_items')
+            if tagged_items is None:
+                data['tagged_items'] = []
+            elif isinstance(tagged_items, str):
+                # If tagged_items is a string, try to parse it as JSON
+                try:
+                    import json
+                    data['tagged_items'] = json.loads(tagged_items)
+                except (json.JSONDecodeError, ValueError):
+                    data['tagged_items'] = []
+            elif not isinstance(tagged_items, list):
+                # Convert other types to list
+                data['tagged_items'] = list(tagged_items) if tagged_items else []
+        else:
             data['tagged_items'] = []
+        
         if 'privacy' not in data or not data.get('privacy'):
             data['privacy'] = 'public'
         return data

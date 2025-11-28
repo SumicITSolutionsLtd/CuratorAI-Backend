@@ -145,30 +145,44 @@ class PostCreateView(generics.CreateAPIView):
         }
     )
     def create(self, request, *args, **kwargs):
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        
         try:
+            # Log incoming request data for debugging
+            logger.info(f"Creating post with data: {dict(request.data)}")
+            
             serializer = self.get_serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             
             # Create post - user is obtained from request context in serializer.create()
             # The serializer will handle images_data and image_urls
-            post = serializer.save()
+            try:
+                post = serializer.save()
+                logger.info(f"Post created successfully with ID: {post.id}")
+            except Exception as create_error:
+                error_traceback = traceback.format_exc()
+                logger.error(f"Error in serializer.save(): {str(create_error)}")
+                logger.error(f"Full traceback:\n{error_traceback}")
+                raise
             
             # Handle legacy multipart/form-data image uploads (if images_data/image_urls not provided)
             # This supports the old 'images' field name for backward compatibility
-            if not post.images.exists():
-                images = request.FILES.getlist('images')
-                for idx, image in enumerate(images[:10]):  # Max 10 images
-                    if image:  # Check if file is not None
-                        PostImage.objects.create(post=post, image=image, order=idx)
+            try:
+                if not post.images.exists():
+                    images = request.FILES.getlist('images')
+                    for idx, image in enumerate(images[:10]):  # Max 10 images
+                        if image:  # Check if file is not None
+                            PostImage.objects.create(post=post, image=image, order=idx)
+            except Exception as img_upload_error:
+                logger.warning(f"Error handling legacy image uploads: {str(img_upload_error)}")
+                # Don't fail the entire request if legacy image upload fails
             
             # Return wrapped response - refresh from DB to ensure all relationships are loaded
             post.refresh_from_db()
             
             # Try to serialize the post with proper error handling
-            import logging
-            import traceback
-            logger = logging.getLogger(__name__)
-            
             try:
                 # Use select_related to prefetch user and outfit to avoid N+1 queries
                 post = Post.objects.select_related('user', 'outfit').prefetch_related('images').get(pk=post.pk)
@@ -253,18 +267,25 @@ class PostCreateView(generics.CreateAPIView):
                 'data': serializer_data
             }, status=status.HTTP_201_CREATED)
         except serializers.ValidationError as e:
-            # Re-raise validation errors as-is
+            # Log validation errors
+            error_traceback = traceback.format_exc()
+            logger.error(f"Validation error creating post: {str(e)}")
+            logger.error(f"Validation error details: {e.detail if hasattr(e, 'detail') else 'No details'}")
+            logger.error(f"Full traceback:\n{error_traceback}")
+            # Re-raise validation errors as-is (DRF will handle them)
             raise
         except Exception as e:
-            # Log unexpected errors
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Unexpected error creating post: {str(e)}", exc_info=True)
-            # Return a 500 error with details
+            # Log unexpected errors with full traceback
+            error_traceback = traceback.format_exc()
+            logger.error(f"Unexpected error creating post: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Full traceback:\n{error_traceback}")
+            # Return a 500 error with details (include error message for debugging)
             return Response({
                 'success': False,
                 'message': f'An error occurred while creating the post: {str(e)}',
-                'error': str(e)
+                'error': str(e),
+                'error_type': type(e).__name__,
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
