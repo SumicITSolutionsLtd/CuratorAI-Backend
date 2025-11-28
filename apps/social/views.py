@@ -145,26 +145,42 @@ class PostCreateView(generics.CreateAPIView):
         }
     )
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        
-        # Create post - user is obtained from request context in serializer.create()
-        # The serializer will handle images_data and image_urls
-        post = serializer.save()
-        
-        # Handle legacy multipart/form-data image uploads (if images_data/image_urls not provided)
-        # This supports the old 'images' field name for backward compatibility
-        if not post.images.exists():
-            images = request.FILES.getlist('images')
-            for idx, image in enumerate(images[:10]):  # Max 10 images
-                PostImage.objects.create(post=post, image=image, order=idx)
-        
-        # Return wrapped response
-        return Response({
-            'success': True,
-            'message': 'Post created successfully',
-            'data': PostSerializer(post, context={'request': request}).data
-        }, status=status.HTTP_201_CREATED)
+        try:
+            serializer = self.get_serializer(data=request.data, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            
+            # Create post - user is obtained from request context in serializer.create()
+            # The serializer will handle images_data and image_urls
+            post = serializer.save()
+            
+            # Handle legacy multipart/form-data image uploads (if images_data/image_urls not provided)
+            # This supports the old 'images' field name for backward compatibility
+            if not post.images.exists():
+                images = request.FILES.getlist('images')
+                for idx, image in enumerate(images[:10]):  # Max 10 images
+                    if image:  # Check if file is not None
+                        PostImage.objects.create(post=post, image=image, order=idx)
+            
+            # Return wrapped response
+            return Response({
+                'success': True,
+                'message': 'Post created successfully',
+                'data': PostSerializer(post, context={'request': request}).data
+            }, status=status.HTTP_201_CREATED)
+        except serializers.ValidationError as e:
+            # Re-raise validation errors as-is
+            raise
+        except Exception as e:
+            # Log unexpected errors
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Unexpected error creating post: {str(e)}", exc_info=True)
+            # Return a 500 error with details
+            return Response({
+                'success': False,
+                'message': f'An error occurred while creating the post: {str(e)}',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PostUpdateView(generics.UpdateAPIView):
