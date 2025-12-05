@@ -32,7 +32,7 @@ class GoogleOAuthView(views.APIView):
         request=inline_serializer(
             name='GoogleOAuthRequest',
             fields={
-                'access_token': serializers.CharField(required=True, help_text='Google OAuth access token'),
+                'access_token': serializers.CharField(required=True, help_text='Google OAuth ID token (JWT) or access token'),
             }
         ),
         responses={
@@ -105,8 +105,101 @@ class GoogleOAuthView(views.APIView):
                 'message': f'Authentication failed: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
     
-    def _verify_google_token(self, access_token):
+    def _verify_google_token(self, token):
+        """
+        Verify Google token (ID token or access token) and get user info.
+        Supports both Google ID tokens (JWT) and access tokens.
+        """
+        import base64
+        import json
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Check if token is a JWT (ID token) by checking if it has 3 parts separated by dots
+            # JWT format: header.payload.signature
+            if token.count('.') == 2:
+                # This looks like an ID token (JWT)
+                return self._verify_google_id_token(token)
+            else:
+                # This looks like an access token
+                return self._verify_google_access_token(token)
+        except Exception as e:
+            logger.error(f'Unexpected error verifying Google token: {str(e)}')
+            return None
+    
+    def _verify_google_id_token(self, id_token):
+        """
+        Verify Google ID token (JWT) and extract user info.
+        Uses Google's tokeninfo endpoint to verify the ID token.
+        """
+        import requests
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Verify ID token with Google's tokeninfo endpoint
+            response = requests.get(
+                'https://oauth2.googleapis.com/tokeninfo',
+                params={'id_token': id_token},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                token_info = response.json()
+                
+                # Verify the token is for our client
+                # Try to get from SOCIALACCOUNT_PROVIDERS first, then from direct settings
+                google_client_id = (
+                    getattr(settings, 'SOCIALACCOUNT_PROVIDERS', {})
+                    .get('google', {})
+                    .get('APP', {})
+                    .get('client_id')
+                ) or getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', None)
+                
+                if google_client_id:
+                    aud = token_info.get('aud')
+                    if aud != google_client_id:
+                        logger.warning(f'Token audience mismatch: expected {google_client_id}, got {aud}')
+                        return None
+                
+                # Extract user info from token
+                user_info = {
+                    'id': token_info.get('sub'),  # Google user ID
+                    'email': token_info.get('email'),
+                    'email_verified': token_info.get('email_verified', False),
+                    'given_name': token_info.get('given_name', ''),
+                    'family_name': token_info.get('family_name', ''),
+                    'name': token_info.get('name', ''),
+                    'picture': token_info.get('picture', ''),
+                }
+                
+                # Ensure we have required fields
+                if not user_info.get('id') or not user_info.get('email'):
+                    logger.error('ID token missing required fields (sub or email)')
+                    return None
+                
+                return user_info
+            else:
+                logger.error(f'Google tokeninfo endpoint returned status {response.status_code}: {response.text}')
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f'Google ID token verification error: {str(e)}')
+            return None
+        except Exception as e:
+            logger.error(f'Unexpected error verifying Google ID token: {str(e)}')
+            return None
+    
+    def _verify_google_access_token(self, access_token):
         """Verify Google access token and get user info."""
+        import requests
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
         try:
             # First try v2 API
             response = requests.get(
@@ -128,28 +221,14 @@ class GoogleOAuthView(views.APIView):
             if response.status_code == 200:
                 return response.json()
             
-            # If both fail, try tokeninfo endpoint to verify token
-            token_response = requests.get(
-                f'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={access_token}',
-                timeout=10
-            )
-            
-            if token_response.status_code == 200:
-                token_info = token_response.json()
-                # If token is valid but we can't get userinfo, return error
-                return None
-            
+            logger.warning('Failed to verify Google access token with userinfo endpoints')
             return None
+            
         except requests.exceptions.RequestException as e:
-            # Log the error for debugging
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f'Google token verification error: {str(e)}')
+            logger.error(f'Google access token verification error: {str(e)}')
             return None
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f'Unexpected error verifying Google token: {str(e)}')
+            logger.error(f'Unexpected error verifying Google access token: {str(e)}')
             return None
     
     def _get_or_create_user_from_google(self, google_user_info):
