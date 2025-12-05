@@ -45,6 +45,7 @@ EMAIL_HOST_PASSWORD=your-app-specific-password
 # ============================================
 
 # Google OAuth
+# Google OAuth Configuration
 GOOGLE_OAUTH_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 GOOGLE_OAUTH_CLIENT_SECRET=your-google-client-secret
 
