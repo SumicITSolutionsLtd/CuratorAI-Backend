@@ -1,0 +1,129 @@
+name: Deploy to AWS App Runner
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: curator-backend
+  APP_RUNNER_SERVICE: curator-backend
+
+jobs:
+  deploy:
+    name: Build and Deploy to AWS
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build Docker image
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        
+        # Push both tags
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "image-latest=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_OUTPUT
+
+    - name: Get App Runner Service ARN
+      id: get-service
+      run: |
+        SERVICE_ARN=$(aws apprunner list-services \
+          --region ${{ env.AWS_REGION }} \
+          --query "ServiceSummaryList[?ServiceName=='${{ env.APP_RUNNER_SERVICE }}'].ServiceArn" \
+          --output text)
+        
+        if [ -z "$SERVICE_ARN" ]; then
+          echo "Error: App Runner service '${{ env.APP_RUNNER_SERVICE }}' not found"
+          exit 1
+        fi
+        
+        echo "service-arn=$SERVICE_ARN" >> $GITHUB_OUTPUT
+        echo "Service ARN: $SERVICE_ARN"
+
+    - name: Update App Runner service
+      id: update-service
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        SERVICE_ARN="${{ steps.get-service.outputs.service-arn }}"
+        IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+        
+        echo "Updating App Runner service with image: $IMAGE_URI"
+        
+        # Create a new revision with the updated image
+        aws apprunner start-deployment \
+          --service-arn "$SERVICE_ARN" \
+          --region ${{ env.AWS_REGION }}
+        
+        echo "Deployment started successfully"
+
+    - name: Wait for deployment to complete
+      run: |
+        SERVICE_ARN="${{ steps.get-service.outputs.service-arn }}"
+        MAX_WAIT=600  # 10 minutes
+        ELAPSED=0
+        INTERVAL=30
+        
+        echo "Waiting for deployment to complete..."
+        
+        while [ $ELAPSED -lt $MAX_WAIT ]; do
+          STATUS=$(aws apprunner describe-service \
+            --service-arn "$SERVICE_ARN" \
+            --region ${{ env.AWS_REGION }} \
+            --query "Service.Status" \
+            --output text)
+          
+          echo "Current status: $STATUS (elapsed: ${ELAPSED}s)"
+          
+          if [ "$STATUS" = "RUNNING" ]; then
+            echo "✅ Deployment completed successfully!"
+            exit 0
+          elif [ "$STATUS" = "OPERATION_IN_PROGRESS" ] || [ "$STATUS" = "CREATE_FAILED" ] || [ "$STATUS" = "UPDATE_FAILED" ]; then
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          else
+            echo "⚠️ Unexpected status: $STATUS"
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          fi
+        done
+        
+        echo "⚠️ Deployment timeout after ${MAX_WAIT}s"
+        echo "Check AWS App Runner console for details"
+
+    - name: Deployment Summary
+      if: always()
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Image:** \`${{ steps.build-image.outputs.image }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Service:** \`${{ env.APP_RUNNER_SERVICE }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Region:** \`${{ env.AWS_REGION }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+

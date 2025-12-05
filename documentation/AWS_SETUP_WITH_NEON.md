@@ -118,20 +118,47 @@ scripts\deploy-to-aws.bat
 
 ### Step 6: Setup GitHub Actions
 
-1. **Create IAM Role for GitHub:**
-   - IAM → Roles → Create role
-   - Trusted entity: **Web identity** → **GitHub**
-   - Condition: `repo:YOUR_USERNAME/YOUR_REPO:*`
-   - Policies: `AmazonEC2ContainerRegistryFullAccess`, `AppRunnerFullAccess`
+1. **Add GitHub as Identity Provider (Required First):** 
+   
+   Go to IAM → Identity providers → Add provider:
+   - **Provider type:** OpenID Connect
+   - **Provider URL:** `https://token.actions.githubusercontent.com`
+   - **Audience:** `sts.amazonaws.com`
+   - Click **Add provider**
 
-2. **Add GitHub Secrets:**
-   - `AWS_ROLE_ARN`: Your role ARN
+2. **Create IAM Role for GitHub:**
+   
+   Go to IAM → Roles → Create role:
+   - **Trusted entity type:** Web identity
+   - **Identity provider:** Select **GitHub** (from Step 1)
+   - **Audience:** `sts.amazonaws.com`
+   
+   **Add conditions:**
+   - Condition 1: `StringEquals` → `token.actions.githubusercontent.com:aud` = `sts.amazonaws.com`
+   - Condition 2: `StringLike` → `token.actions.githubusercontent.com:sub` = `repo:YOUR_USERNAME/YOUR_REPO:*`
+     (Replace `YOUR_USERNAME` and `YOUR_REPO` with your actual GitHub username and repository name)
+   
+   **Attach policies:**
+   - `AmazonEC2ContainerRegistryFullAccess`
+   - `AppRunnerFullAccess`
+   
+   **Name:** `GitHubActionsDeployRole`
+   - **Copy the Role ARN** (you'll need it for GitHub Secrets)
+
+3. **Add GitHub Secrets:**
+   
+   Go to GitHub → Repository → Settings → Secrets and variables → Actions
+   
+   Add secrets:
+   - `AWS_ROLE_ARN`: Your IAM role ARN (from Step 2)
    - `AWS_REGION`: `us-east-1`
 
-3. **Test:**
+4. **Test:**
    ```bash
    git push origin main
    ```
+   
+   Check GitHub Actions tab for deployment status.
 
 ## Environment Variables Template
 

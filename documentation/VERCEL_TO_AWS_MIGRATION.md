@@ -142,20 +142,50 @@ chmod +x scripts/deploy-to-aws.sh
 
 ### Step 7: Setup GitHub Actions CI/CD
 
-1. **Create IAM Role for GitHub Actions:**
+1. **Add GitHub as Identity Provider (Required First Step):**
+
+   Go to IAM → Identity providers → Add provider:
+   - **Provider type:** OpenID Connect
+   - **Provider URL:** `https://token.actions.githubusercontent.com`
+   - **Audience:** `sts.amazonaws.com`
+   - Click **Add provider**
+   
+   **Note:** This step is required before GitHub will appear as an option when creating roles.
+
+2. **Create IAM Role for GitHub Actions:**
 
    Go to IAM → Roles → Create role:
-   - Trusted entity: **Web identity**
-   - Identity provider: **GitHub**
-   - Audience: `sts.amazonaws.com`
-   - Condition: `StringEquals` → `token.actions.githubusercontent.com:aud` = `sts.amazonaws.com`
-   - Condition: `StringLike` → `token.actions.githubusercontent.com:sub` = `repo:YOUR_USERNAME/YOUR_REPO:*`
-
-   Attach policies:
-   - `AmazonEC2ContainerRegistryFullAccess`
-   - `AppRunnerFullAccess`
-
-   Note the Role ARN
+   - **Trusted entity type:** Web identity
+   - **Identity provider:** Select **GitHub** (should now appear after Step 1)
+   - **Audience:** `sts.amazonaws.com`
+   
+   Click **Next**
+   
+   **Add conditions:**
+   - Click **Add condition**
+   - **Condition key:** `StringEquals`
+   - **Key:** `token.actions.githubusercontent.com:aud`
+   - **Value:** `sts.amazonaws.com`
+   
+   - Click **Add condition** again
+   - **Condition key:** `StringLike`
+   - **Key:** `token.actions.githubusercontent.com:sub`
+   - **Value:** `repo:YOUR_USERNAME/YOUR_REPO:*` (replace with your GitHub username and repo name)
+   
+   Click **Next**
+   
+   **Attach policies:**
+   - Search and select: `AmazonEC2ContainerRegistryFullAccess`
+   - Search and select: `AppRunnerFullAccess`
+   
+   Click **Next**
+   
+   **Name and review:**
+   - **Role name:** `GitHubActionsDeployRole` (or your preferred name)
+   - Review the settings
+   - Click **Create role**
+   
+   **Important:** Copy the **Role ARN** (you'll need it for GitHub Secrets)
 
 2. **Add GitHub Secrets:**
 
@@ -282,7 +312,7 @@ If issues occur:
 
 ## Support
 
-- Full AWS Guide: `AWS_DEPLOYMENT_GUIDE.md`
-- Quick Start: `AWS_QUICK_START.md`
-- Checklist: `AWS_MIGRATION_CHECKLIST.md`
+- **AWS Setup Guide:** [`AWS_SETUP_WITH_NEON.md`](./AWS_SETUP_WITH_NEON.md) - Complete setup instructions
+- **Migration Checklist:** [`AWS_MIGRATION_CHECKLIST.md`](./AWS_MIGRATION_CHECKLIST.md) - Step-by-step checklist
+- **Quick Start:** See "Quick Migration Steps" section above
 
