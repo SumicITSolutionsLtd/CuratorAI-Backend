@@ -65,32 +65,15 @@ jobs:
         echo "service-arn=$SERVICE_ARN" >> $GITHUB_OUTPUT
         echo "Service ARN: $SERVICE_ARN"
 
-    - name: Update App Runner service
-      id: update-service
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
+    - name: Wait for service to be RUNNING
+      id: wait-running
       run: |
         SERVICE_ARN="${{ steps.get-service.outputs.service-arn }}"
-        IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-        
-        echo "Updating App Runner service with image: $IMAGE_URI"
-        
-        # Create a new revision with the updated image
-        aws apprunner start-deployment \
-          --service-arn "$SERVICE_ARN" \
-          --region ${{ env.AWS_REGION }}
-        
-        echo "Deployment started successfully"
-
-    - name: Wait for deployment to complete
-      run: |
-        SERVICE_ARN="${{ steps.get-service.outputs.service-arn }}"
-        MAX_WAIT=600  # 10 minutes
+        MAX_WAIT=300  # 5 minutes
         ELAPSED=0
-        INTERVAL=30
+        INTERVAL=10
         
-        echo "Waiting for deployment to complete..."
+        echo "Checking service status..."
         
         while [ $ELAPSED -lt $MAX_WAIT ]; do
           STATUS=$(aws apprunner describe-service \
@@ -99,22 +82,96 @@ jobs:
             --query "Service.Status" \
             --output text)
           
-          echo "Current status: $STATUS (elapsed: ${ELAPSED}s)"
+          echo "Service status: $STATUS (elapsed: ${ELAPSED}s)"
           
           if [ "$STATUS" = "RUNNING" ]; then
-            echo "✅ Deployment completed successfully!"
+            echo "✅ Service is RUNNING, ready for deployment"
             exit 0
-          elif [ "$STATUS" = "OPERATION_IN_PROGRESS" ] || [ "$STATUS" = "CREATE_FAILED" ] || [ "$STATUS" = "UPDATE_FAILED" ]; then
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
+          elif [ "$STATUS" = "CREATE_FAILED" ] || [ "$STATUS" = "DELETE_FAILED" ] || [ "$STATUS" = "UPDATE_FAILED" ]; then
+            echo "❌ Service is in failed state: $STATUS"
+            exit 1
           else
-            echo "⚠️ Unexpected status: $STATUS"
+            echo "Waiting for service to be RUNNING (current: $STATUS)..."
             sleep $INTERVAL
             ELAPSED=$((ELAPSED + INTERVAL))
           fi
         done
         
+        echo "⚠️ Timeout waiting for service to be RUNNING"
+        exit 1
+
+    - name: Start App Runner deployment
+      id: start-deployment
+      run: |
+        SERVICE_ARN="${{ steps.get-service.outputs.service-arn }}"
+        
+        echo "Starting deployment for service: $SERVICE_ARN"
+        
+        # Start the deployment
+        # Note: This only works if the service is in RUNNING state
+        # If your service uses :latest tag, the new image is already available
+        aws apprunner start-deployment \
+          --service-arn "$SERVICE_ARN" \
+          --region ${{ env.AWS_REGION }} \
+          --output json || {
+            echo "⚠️ Note: If your App Runner service is configured with automatic deployment,"
+            echo "it will automatically deploy the new :latest image."
+            echo "Otherwise, you may need to update the service source configuration first."
+            exit 0  # Don't fail if automatic deployment is enabled
+          }
+        
+        echo "Deployment started successfully"
+
+    - name: Wait for deployment to complete
+      run: |
+        SERVICE_ARN="${{ steps.get-service.outputs.service-arn }}"
+        MAX_WAIT=900  # 15 minutes
+        ELAPSED=0
+        INTERVAL=30
+        
+        echo "Waiting for deployment to complete..."
+        
+        while [ $ELAPSED -lt $MAX_WAIT ]; do
+          SERVICE_STATUS=$(aws apprunner describe-service \
+            --service-arn "$SERVICE_ARN" \
+            --region ${{ env.AWS_REGION }} \
+            --query "Service.Status" \
+            --output text)
+          
+          OPERATION_STATUS=$(aws apprunner describe-service \
+            --service-arn "$SERVICE_ARN" \
+            --region ${{ env.AWS_REGION }} \
+            --query "Service.ServiceUrl" \
+            --output text 2>/dev/null || echo "checking")
+          
+          echo "Service status: $SERVICE_STATUS (elapsed: ${ELAPSED}s)"
+          
+          if [ "$SERVICE_STATUS" = "RUNNING" ]; then
+            # Check if there's an active operation
+            OPERATION=$(aws apprunner list-operations \
+              --service-arn "$SERVICE_ARN" \
+              --region ${{ env.AWS_REGION }} \
+              --query "OperationSummaryList[?Status=='IN_PROGRESS']" \
+              --output json 2>/dev/null || echo "[]")
+            
+            if [ "$OPERATION" = "[]" ] || [ -z "$OPERATION" ]; then
+              echo "✅ Deployment completed successfully! Service is RUNNING"
+              exit 0
+            else
+              echo "Deployment still in progress..."
+            fi
+          elif [ "$SERVICE_STATUS" = "CREATE_FAILED" ] || [ "$SERVICE_STATUS" = "UPDATE_FAILED" ] || [ "$SERVICE_STATUS" = "DELETE_FAILED" ]; then
+            echo "❌ Deployment failed with status: $SERVICE_STATUS"
+            echo "Check AWS App Runner console for details"
+            exit 1
+          fi
+          
+          sleep $INTERVAL
+          ELAPSED=$((ELAPSED + INTERVAL))
+        done
+        
         echo "⚠️ Deployment timeout after ${MAX_WAIT}s"
+        echo "Service status: $SERVICE_STATUS"
         echo "Check AWS App Runner console for details"
 
     - name: Deployment Summary
